@@ -1,3 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Liste de Courses</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#14171C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Courses">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #14171C; }
+  #root { min-height: 100vh; }
+  #boot-error { display:none; color:#F5F3EE; font-family:-apple-system,sans-serif; padding:24px; max-width:480px; margin:0 auto; }
+</style>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+}
+window.addEventListener('error', function (e) {
+  var el = document.getElementById('boot-error');
+  var root = document.getElementById('root');
+  if (root && !root.hasChildNodes() && el) {
+    el.style.display = 'block';
+    el.querySelector('#boot-error-msg').textContent = (e && e.message) || 'Erreur inconnue';
+  }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/6.26.0/babel.min.js" crossorigin></script>
+</head>
+<body>
+<div id="root"></div>
+<div id="boot-error">
+  <h2>⚠️ L'application n'a pas pu démarrer</h2>
+  <p>Vérifie ta connexion internet (React/Babel sont chargés depuis un CDN) puis recharge la page.</p>
+  <p style="opacity:.6;font-size:.8em" id="boot-error-msg"></p>
+</div>
+<script type="text/babel" data-presets="react">
 const { useState, useMemo, useRef, useEffect } = React;
 
 // --- Icônes SVG légères (remplacent lucide-react pour la version autonome) ---
@@ -77,6 +121,7 @@ const CATEGORIES = [
   { key: "foyer_entretien", label: "Foyer & Entretien", accent: "#8B7BA8", tint: "#252129" },
   { key: "soin_sante", label: "Soin & Santé", accent: "#5FA88C", tint: "#1E2A25" },
   { key: "artisanat_jardin", label: "Artisanat & Jardin", accent: "#7C8C4A", tint: "#24291C" },
+  { key: "autre", label: "Autre", accent: "#8B93A1", tint: "#23262C" },
 ];
 const catInfo = (key) => CATEGORIES.find((c) => c.key === key);
 
@@ -332,6 +377,9 @@ const PRODUCTS = (() => {
 
 const UNITS = ["unité", "g", "kg", "ml", "L", "paquet"];
 
+// Toutes les icônes déjà utilisées dans la base, proposées dans le sélecteur d'icône
+const ALL_ICONS = [...new Set(PRODUCTS.map((p) => p.icon))];
+
 // Normalise pour une recherche insensible aux accents / ligatures (ex: "boeuf" trouve "bœuf")
 function normalize(str) {
   return String(str)
@@ -424,16 +472,24 @@ const stepperBtn = { width: 38, height: 38, borderRadius: 10, border: "1px solid
 
 // --- Carte produit (avec appui long pour édition) ---------------------------
 
-function ItemCard({ item, product, onEdit, small }) {
+function ItemCard({ item, product, onEdit, onQuickTap, small }) {
   const timer = useRef(null);
+  const longPressed = useRef(false);
   const c = catInfo(product.cat);
-  const startPress = () => { timer.current = setTimeout(() => onEdit(), 480); };
+  const startPress = () => {
+    longPressed.current = false;
+    timer.current = setTimeout(() => { longPressed.current = true; onEdit(); }, 480);
+  };
   const cancelPress = () => { if (timer.current) clearTimeout(timer.current); };
+  const endPress = () => {
+    cancelPress();
+    if (!longPressed.current && onQuickTap) onQuickTap();
+  };
 
   return (
     <div
       onPointerDown={startPress}
-      onPointerUp={cancelPress}
+      onPointerUp={endPress}
       onPointerLeave={cancelPress}
       onContextMenu={(e) => e.preventDefault()}
       style={{ background: c.tint, border: `1px solid ${c.accent}33`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer" }}
@@ -448,9 +504,107 @@ function ItemCard({ item, product, onEdit, small }) {
   );
 }
 
+// --- Création / édition d'un article (onglet "Tous les produits") ----------
+
+function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete }) {
+  const [name, setName] = useState(product?.name ?? "");
+  const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
+  const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
+  const c = catInfo(cat) || CATEGORIES[0];
+  const isEdit = mode === "edit";
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 70 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <span style={{ width: 44, height: 44, borderRadius: 12, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>
+            {icon}
+          </span>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>{isEdit ? "Modifier l'article" : "Nouvel article"}</div>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="ex : Sauce chimichurri"
+          style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+        />
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Rayon</label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "8px 0 20px" }}>
+          {CATEGORIES.map((cc) => (
+            <button key={cc.key} onClick={() => setCat(cc.key)} style={{ padding: "7px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, border: `1px solid ${cat === cc.key ? cc.accent : "#2A303A"}`, background: cat === cc.key ? cc.accent + "26" : "transparent", color: cat === cc.key ? cc.accent : "#9CA3AF", cursor: "pointer" }}>
+              {cc.label}
+            </button>
+          ))}
+        </div>
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6, margin: "8px 0 22px", maxHeight: 180, overflowY: "auto", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, padding: 8 }}>
+          {ALL_ICONS.map((ic, i) => (
+            <button key={ic + i} onClick={() => setIcon(ic)} style={{ fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer" }}>
+              {ic}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          {isEdit && onDelete && (
+            <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              Supprimer
+            </button>
+          )}
+          <button
+            disabled={!name.trim()}
+            onClick={() => onSave({ name: name.trim(), icon, cat })}
+            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#2A303A" : c.accent, color: !name.trim() ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
+          >
+            {isEdit ? "Enregistrer" : "Créer l'article"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Tuile produit de l'onglet "Tous les produits" : appui court = ajouter à la liste, appui long = éditer
+function ProductTile({ product, cat, onTap, onLongPress }) {
+  const timer = useRef(null);
+  const longPressed = useRef(false);
+  const start = () => {
+    longPressed.current = false;
+    timer.current = setTimeout(() => { longPressed.current = true; onLongPress(); }, 480);
+  };
+  const cancel = () => { if (timer.current) clearTimeout(timer.current); };
+  const end = () => { cancel(); if (!longPressed.current) onTap(); };
+
+  return (
+    <button
+      onPointerDown={start}
+      onPointerUp={end}
+      onPointerLeave={cancel}
+      onContextMenu={(e) => e.preventDefault()}
+      style={{ background: cat.tint, border: `1px solid ${cat.accent}33`, borderRadius: 14, padding: "12px 4px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer", userSelect: "none" }}
+    >
+      <span style={{ fontSize: 21 }}>{product.icon}</span>
+      <span style={{ fontSize: 10.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2, color: "#F0EEE8" }}>{product.name}</span>
+    </button>
+  );
+}
+
 // --- Éditeur de recette ------------------------------------------------------
 
-function RecipeEditor({ draft, onCancel, onSave }) {
+function RecipeEditor({ draft, onCancel, onSave, products }) {
   const [name, setName] = useState(draft?.name ?? "");
   const [ingredients, setIngredients] = useState(draft?.ingredients ?? []);
   const [steps, setSteps] = useState(draft?.steps ?? []);
@@ -479,14 +633,14 @@ function RecipeEditor({ draft, onCancel, onSave }) {
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return [];
-    return PRODUCTS.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
-  }, [query]);
+    return products.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
+  }, [query, products]);
 
   const openAdd = (product) => { setModalProduct(product); setEditingIngId(null); setQuery(""); };
   const openEdit = (ingId) => {
     const entry = ingredients.find((i) => i.ingId === ingId);
     if (!entry) return;
-    setModalProduct(PRODUCTS.find((p) => p.id === entry.productId));
+    setModalProduct(products.find((p) => p.id === entry.productId));
     setEditingIngId(ingId);
   };
   const confirm = ({ qty, unit, note }) => {
@@ -558,7 +712,7 @@ function RecipeEditor({ draft, onCancel, onSave }) {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 28 }}>
           {ingredients.map((item) => {
-            const product = PRODUCTS.find((p) => p.id === item.productId);
+            const product = products.find((p) => p.id === item.productId);
             if (!product) return null;
             return <ItemCard key={item.ingId} item={item} product={product} onEdit={() => openEdit(item.ingId)} />;
           })}
@@ -645,7 +799,7 @@ function RecipeEditor({ draft, onCancel, onSave }) {
 
 // --- Carte recette (vue liste) -----------------------------------------------
 
-function RecipeCard({ recipe, onOpen, onAddToList }) {
+function RecipeCard({ recipe, onOpen, onAddToList, products }) {
   const [added, setAdded] = useState(false);
   const preview = recipe.ingredients.slice(0, 5);
 
@@ -661,7 +815,7 @@ function RecipeCard({ recipe, onOpen, onAddToList }) {
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {preview.map((item) => {
-            const p = PRODUCTS.find((pr) => pr.id === item.productId);
+            const p = products.find((pr) => pr.id === item.productId);
             if (!p) return null;
             return (
               <span key={item.ingId} style={{ width: 30, height: 30, borderRadius: 8, background: catInfo(p.cat).accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
@@ -717,44 +871,106 @@ function App() {
     try { return JSON.parse(localStorage.getItem("courses_recipes") || "[]"); } catch (e) { return []; }
   });
   const [recipeEditing, setRecipeEditing] = useState(null); // null | {} | recipe object
-  const [collapsedCats, setCollapsedCats] = useState({}); // { [catKey]: true } dans "Tous les produits"
+  const [collapsedCats, setCollapsedCats] = useState(() => {
+    const init = {};
+    CATEGORIES.forEach((c) => { init[c.key] = true; }); // rayons repliés par défaut dans "Tous les produits"
+    return init;
+  });
+  const [customProducts, setCustomProducts] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("courses_custom_products") || "[]"); } catch (e) { return []; }
+  }); // articles créés par l'utilisateur
+  const [productOverrides, setProductOverrides] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("courses_product_overrides") || "{}"); } catch (e) { return {}; }
+  }); // { [id]: {name, icon, cat} } pour les articles de base modifiés
+  const [deletedProductIds, setDeletedProductIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("courses_deleted_ids") || "[]"); } catch (e) { return []; }
+  }); // ids d'articles (de base) supprimés
+  const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
   const inputRef = useRef(null);
 
-  useEffect(() => {
-    try { localStorage.setItem("courses_list", JSON.stringify(list)); } catch (e) {}
-  }, [list]);
-  useEffect(() => {
-    try { localStorage.setItem("courses_recipes", JSON.stringify(recipes)); } catch (e) {}
-  }, [recipes]);
+  useEffect(() => { try { localStorage.setItem("courses_list", JSON.stringify(list)); } catch (e) {} }, [list]);
+  useEffect(() => { try { localStorage.setItem("courses_recipes", JSON.stringify(recipes)); } catch (e) {} }, [recipes]);
+  useEffect(() => { try { localStorage.setItem("courses_custom_products", JSON.stringify(customProducts)); } catch (e) {} }, [customProducts]);
+  useEffect(() => { try { localStorage.setItem("courses_product_overrides", JSON.stringify(productOverrides)); } catch (e) {} }, [productOverrides]);
+  useEffect(() => { try { localStorage.setItem("courses_deleted_ids", JSON.stringify(deletedProductIds)); } catch (e) {} }, [deletedProductIds]);
 
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
+
+  // Base + articles personnalisés, avec overrides et suppressions appliqués
+  const products = useMemo(() => {
+    const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
+    const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
+    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
+    return [...base, ...customs];
+  }, [customProducts, productOverrides, deletedProductIds]);
+
+  const addCustomProduct = ({ name, icon, cat }) => {
+    const p = { id: `custom-${Date.now()}`, name, icon, cat };
+    setCustomProducts((l) => [...l, p]);
+    return p;
+  };
+  const editProduct = (id, patch) => {
+    if (id.startsWith("custom-")) {
+      setCustomProducts((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    } else {
+      setProductOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), ...patch } }));
+    }
+  };
+  const deleteProduct = (id) => {
+    if (id.startsWith("custom-")) {
+      setCustomProducts((l) => l.filter((p) => p.id !== id));
+    } else {
+      setDeletedProductIds((ids) => [...ids, id]);
+    }
+  };
+
+  const openNewProductModal = () => setProductModal({ mode: "create" });
+  const openEditProductModal = (product) => setProductModal({ mode: "edit", product });
+  const closeProductModal = () => setProductModal(null);
+  const saveProductModal = ({ name, icon, cat }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, icon, cat });
+    else editProduct(productModal.product.id, { name, icon, cat });
+    closeProductModal();
+  };
+  const deleteFromProductModal = () => {
+    deleteProduct(productModal.product.id);
+    closeProductModal();
+  };
 
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return [];
-    return PRODUCTS.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
-  }, [query]);
+    return products.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
+  }, [query, products]);
+
+  const addCustomFromSearch = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const p = addCustomProduct({ name: trimmed, icon: "📦", cat: "autre" });
+    openAddModal(p);
+  };
 
   const grouped = useMemo(() => {
     const map = {};
     list.forEach((item) => {
-      const p = PRODUCTS.find((pr) => pr.id === item.productId);
+      const p = products.find((pr) => pr.id === item.productId);
       if (!p) return;
       if (!map[p.cat]) map[p.cat] = [];
       map[p.cat].push({ item, product: p });
     });
     return CATEGORIES.filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
-  }, [list]);
+  }, [list, products]);
 
-  const allGrouped = useMemo(() => CATEGORIES.map((c) => ({ ...c, products: PRODUCTS.filter((p) => p.cat === c.key) })), []);
+  const allGrouped = useMemo(() => CATEGORIES.map((c) => ({ ...c, products: products.filter((p) => p.cat === c.key) })), [products]);
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
   const openEditModal = (listId) => {
     const entry = list.find((l) => l.listId === listId);
     if (!entry) return;
-    setModalProduct(PRODUCTS.find((p) => p.id === entry.productId));
+    setModalProduct(products.find((p) => p.id === entry.productId));
     setEditingListId(listId);
   };
+  const removeFromList = (listId) => setList((l) => l.filter((it) => it.listId !== listId));
   const confirmModal = ({ qty, unit, note }) => {
     if (editingListId) {
       setList((l) => l.map((it) => (it.listId === editingListId ? { ...it, qty, unit, note } : it)));
@@ -881,8 +1097,14 @@ function App() {
               </div>
             )}
             {query && results.length === 0 && (
-              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "16px 14px", fontSize: 13.5, color: "#6B7280", zIndex: 10 }}>
-                Aucun produit trouvé pour « {query} »
+              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "14px", zIndex: 10 }}>
+                <p style={{ fontSize: 13.5, color: "#6B7280", margin: "0 0 10px" }}>Aucun produit trouvé pour « {query} »</p>
+                <button
+                  onClick={addCustomFromSearch}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                >
+                  <Plus size={14} /> Ajouter « {query} » comme article personnalisé
+                </button>
               </div>
             )}
           </div>
@@ -904,48 +1126,54 @@ function App() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                   {cat.entries.map(({ item, product }) => (
-                    <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} />
+                    <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => removeFromList(item.listId)} />
                   ))}
                 </div>
               </section>
             ))
           ))}
 
-        {tab === "tous" &&
-          allGrouped.map((cat) => {
-            const isCollapsed = !!collapsedCats[cat.key];
-            return (
-              <section key={cat.key} style={{ marginBottom: 26 }}>
-                <div
-                  onClick={() => toggleCatCollapsed(cat.key)}
-                  style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
-                >
-                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                  <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.products.length}</span>
-                  <ChevronLeft
-                    size={16}
-                    color="#5B6270"
-                    style={{ marginLeft: "auto", transform: isCollapsed ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}
-                  />
-                </div>
-                {!isCollapsed && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-                    {cat.products.map((p) => (
-                      <button key={p.id} onClick={() => openAddModal(p)} style={{ background: cat.tint, border: `1px solid ${cat.accent}33`, borderRadius: 14, padding: "12px 4px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer" }}>
-                        <span style={{ fontSize: 21 }}>{p.icon}</span>
-                        <span style={{ fontSize: 10.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2, color: "#F0EEE8" }}>{p.name}</span>
-                      </button>
-                    ))}
+        {tab === "tous" && (
+          <>
+            <button
+              onClick={openNewProductModal}
+              style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}
+            >
+              <Plus size={16} /> Nouvel article
+            </button>
+            {allGrouped.map((cat) => {
+              const isCollapsed = !!collapsedCats[cat.key];
+              return (
+                <section key={cat.key} style={{ marginBottom: 26 }}>
+                  <div
+                    onClick={() => toggleCatCollapsed(cat.key)}
+                    style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
+                  >
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
+                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
+                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.products.length}</span>
+                    <ChevronLeft
+                      size={16}
+                      color="#5B6270"
+                      style={{ marginLeft: "auto", transform: isCollapsed ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}
+                    />
                   </div>
-                )}
-              </section>
-            );
-          })}
+                  {!isCollapsed && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                      {cat.products.map((p) => (
+                        <ProductTile key={p.id} product={p} cat={cat} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </>
+        )}
 
         {tab === "recettes" && (
           recipeEditing ? (
-            <RecipeEditor draft={recipeEditing} onCancel={() => setRecipeEditing(null)} onSave={saveRecipe} />
+            <RecipeEditor draft={recipeEditing} onCancel={() => setRecipeEditing(null)} onSave={saveRecipe} products={products} />
           ) : (
             <>
               <button
@@ -962,7 +1190,7 @@ function App() {
                 </div>
               ) : (
                 recipes.map((r) => (
-                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onAddToList={addRecipeToList} />
+                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onAddToList={addRecipeToList} products={products} />
                 ))
               )}
             </>
@@ -979,9 +1207,22 @@ function App() {
           onDelete={editingListId ? deleteFromModal : null}
         />
       )}
+
+      {productModal && (
+        <ProductEditModal
+          mode={productModal.mode}
+          product={productModal.product}
+          onClose={closeProductModal}
+          onSave={saveProductModal}
+          onDelete={productModal.mode === "edit" ? deleteFromProductModal : null}
+        />
+      )}
     </div>
   );
 }
 
-const rootEl = document.getElementById("root");
-ReactDOM.createRoot(rootEl).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+</body>
+</html>
