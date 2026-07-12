@@ -549,7 +549,9 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
         {item.qty} {item.unit}
         {(() => {
           const est = estimateItemPrice(item, product);
-          return est != null ? ` · ${formatEuro(est)}` : "";
+          if (est != null) return ` · ${formatEuro(est)}`;
+          const base = formatProductPrice(product);
+          return base ? ` · ${base}` : "";
         })()}
       </span>
     </div>
@@ -1417,10 +1419,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
 }
 
 // ══════════════════════════════════════════
-// SUPABASE — AUTH + SYNCHRONISATION TEMPS RÉEL
-// ⚠️ Projet Supabase INDÉPENDANT de celui du simulateur immobilier.
-// Remplace les deux valeurs ci-dessous par celles de TON nouveau projet
-// (Project Settings → API → Project URL / anon public key).
+// SUPABASE — AUTH + FOYERS + SYNCHRONISATION TEMPS RÉEL
+// Projet Supabase indépendant (identifiants déjà renseignés).
 // ══════════════════════════════════════════
 const SUPABASE_URL = "https://wpsubdmndqthdonousps.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3ViZG1uZHF0aGRvbm91c3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTU3MzUsImV4cCI6MjA5OTQzMTczNX0.sEtfKED9EwJoELfN8N3AkljfX9UmA-m8jbMAnXDzzO4";
@@ -1439,15 +1439,29 @@ function rowToData(row) {
   };
 }
 
+function getJoinCodeFromUrl() {
+  const m = location.hash.match(/foyer=([0-9a-fA-F-]+)/);
+  return m ? m[1] : "";
+}
+
+function getStoredHouseholdId() {
+  try { return localStorage.getItem("courses_active_household_id"); } catch (e) { return null; }
+}
+function setStoredHouseholdId(id) {
+  try { localStorage.setItem("courses_active_household_id", id); } catch (e) {}
+}
+
 // --- Écran de connexion -----------------------------------------------------
 
-function LoginScreen({ onLogin, loading, error }) {
+function LoginScreen({ onLogin, loading, error, initialCode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pseudo, setPseudo] = useState("");
+  const [code, setCode] = useState(initialCode || "");
 
   const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
+  const submit = () => onLogin({ email, password, pseudo, code });
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1455,7 +1469,7 @@ function LoginScreen({ onLogin, loading, error }) {
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🧺</div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, margin: 0 }}>Liste de Courses</h1>
-          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Connecte-toi pour accéder à la liste du foyer</p>
+          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Connecte-toi pour accéder à ton foyer</p>
         </div>
 
         <label style={labelStyle}>Email</label>
@@ -1463,17 +1477,21 @@ function LoginScreen({ onLogin, loading, error }) {
 
         <label style={labelStyle}>Mot de passe</label>
         <input style={inputStyle} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onLogin({ email, password, pseudo }); }} placeholder="••••••••" />
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="••••••••" />
 
         <label style={labelStyle}>Mon pseudo est</label>
         <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onLogin({ email, password, pseudo }); }} placeholder="ex : Marie" />
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ex : Marie" />
+
+        <label style={labelStyle}>Code foyer (facultatif)</label>
+        <input style={inputStyle} type="text" value={code} onChange={(e) => setCode(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
 
         {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
 
         <button
           disabled={loading || !email || !password}
-          onClick={() => onLogin({ email, password, pseudo })}
+          onClick={submit}
           style={{ width: "100%", padding: "14px 18px", borderRadius: 12, border: "none", background: loading || !email || !password ? "#2A303A" : "#6B9B5E", color: loading || !email || !password ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 15, cursor: loading || !email || !password ? "default" : "pointer" }}
         >
           {loading ? "Connexion…" : "Se connecter"}
@@ -1481,6 +1499,40 @@ function LoginScreen({ onLogin, loading, error }) {
         <p style={{ color: "#4B5563", fontSize: 12, textAlign: "center", marginTop: 16, lineHeight: 1.5 }}>
           Ton compte doit avoir été créé au préalable par l'administrateur du foyer.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// --- Écran "créer ou rejoindre un foyer" (premier accès, aucun foyer) -------
+
+function HouseholdScreen({ onCreate, onJoin, error }) {
+  const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 12, boxSizing: "border-box" };
+
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: 0 }}>Ton foyer</h1>
+          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Crée ton foyer, ou rejoins-en un avec un code reçu.</p>
+        </div>
+
+        <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du foyer (ex : Famille Dupont)" />
+        <button onClick={() => onCreate(name)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "#6B9B5E", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 22 }}>
+          Créer ce foyer
+        </button>
+
+        <div style={{ textAlign: "center", color: "#4B5563", fontSize: 12, margin: "0 0 16px" }}>— ou —</div>
+
+        <input style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code du foyer" />
+        <button onClick={() => onJoin(code)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+          Rejoindre avec ce code
+        </button>
+
+        {error && <p style={{ color: "#C4574A", fontSize: 13, marginTop: 14 }}>{error}</p>}
       </div>
     </div>
   );
@@ -1498,7 +1550,7 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, 
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#F5F3EE" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>👤 Mon compte</span>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1551,42 +1603,105 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, 
 
 // --- Modale "Mon foyer" ------------------------------------------------------
 
-function FoyerModal({ profiles, myId, onClose }) {
+function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseholdId, inviteLink, onClose, onRename, onSwitch, onCreate, onJoin }) {
+  const [nameInput, setNameInput] = useState(householdName || "");
+  const [joinCode, setJoinCode] = useState("");
+  const [newName, setNewName] = useState("");
+  const [status, setStatus] = useState("");
+
+  const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" };
+  const smallBtn = { padding: "0 14px", borderRadius: 10, border: "none", background: "#2A303A", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" };
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#F5F3EE" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Mon foyer</span>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
-        {profiles.length === 0 ? (
-          <p style={{ color: "#5B6270", fontSize: 13.5 }}>Personne d'autre pour l'instant.</p>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {profiles.map((p) => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#14171C", border: "1px solid #2A303A", borderRadius: 12, padding: "12px 14px" }}>
-                <span style={{ width: 34, height: 34, borderRadius: "50%", background: "#6B9B5E26", color: "#6B9B5E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
-                  {(p.pseudo || "?").slice(0, 1).toUpperCase()}
-                </span>
-                <span style={{ fontSize: 14.5, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
-                {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6B9B5E", fontWeight: 600 }}>Toi</span>}
-              </div>
-            ))}
-          </div>
+
+        <label style={labelStyle}>Nom du foyer actuel</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 18 }}>
+          <input style={fieldStyle} value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+          <button style={smallBtn} onClick={async () => { const ok = await onRename(nameInput.trim()); setStatus(ok ? "✓ Renommé" : "❌ Erreur"); }}>OK</button>
+        </div>
+
+        <label style={labelStyle}>Membres</label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 20px" }}>
+          {profiles.length === 0 ? (
+            <p style={{ color: "#5B6270", fontSize: 13.5, margin: 0 }}>Personne d'autre pour l'instant.</p>
+          ) : profiles.map((p) => (
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#14171C", border: "1px solid #2A303A", borderRadius: 12, padding: "10px 14px" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#6B9B5E26", color: "#6B9B5E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                {(p.pseudo || "?").slice(0, 1).toUpperCase()}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
+              {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6B9B5E", fontWeight: 600 }}>Toi</span>}
+            </div>
+          ))}
+        </div>
+
+        <label style={labelStyle}>Inviter quelqu'un</label>
+        <p style={{ fontSize: 12.5, color: "#6B7280", margin: "6px 0 8px" }}>Ce lien connecte directement la personne à ce foyer (elle doit avoir un compte).</p>
+        <button
+          onClick={() => { navigator.clipboard?.writeText(inviteLink); setStatus("🔗 Lien copié !"); }}
+          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 20 }}
+        >
+          📋 Copier le lien d'invitation
+        </button>
+
+        {myHouseholds.length > 1 && (
+          <>
+            <label style={labelStyle}>Passer à un autre foyer</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 20px" }}>
+              {myHouseholds.map((h) => (
+                <button
+                  key={h.id}
+                  onClick={() => onSwitch(h.id)}
+                  disabled={h.id === currentHouseholdId}
+                  style={{ textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `1px solid ${h.id === currentHouseholdId ? "#6B9B5E" : "#2A303A"}`, background: h.id === currentHouseholdId ? "#6B9B5E26" : "transparent", color: h.id === currentHouseholdId ? "#6B9B5E" : "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: h.id === currentHouseholdId ? "default" : "pointer" }}
+                >
+                  {h.name} {h.id === currentHouseholdId ? " · actif" : ""}
+                </button>
+              ))}
+            </div>
+          </>
         )}
+
+        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "0 0 18px" }} />
+
+        <label style={labelStyle}>Rejoindre un autre foyer</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
+          <input style={fieldStyle} value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Code du foyer" />
+          <button style={smallBtn} onClick={async () => { const ok = await onJoin(joinCode.trim()); setStatus(ok ? "✓ Foyer rejoint" : "❌ Code invalide"); if (ok) setJoinCode(""); }}>Rejoindre</button>
+        </div>
+
+        <label style={labelStyle}>Créer un nouveau foyer indépendant</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <input style={fieldStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nom du nouveau foyer" />
+          <button style={smallBtn} onClick={async () => { const ok = await onCreate(newName.trim()); setStatus(ok ? "✓ Foyer créé" : "❌ Erreur"); if (ok) setNewName(""); }}>Créer</button>
+        </div>
+
+        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") ? "#6B9B5E" : "#C4574A", marginTop: 16 }}>{status}</p>}
       </div>
     </div>
   );
 }
 
-// --- Racine : gère l'auth, le chargement et la synchro temps réel -----------
+// --- Racine : gère l'auth, les foyers, le chargement et la synchro temps réel
 
 function Root() {
-  const [session, setSession] = useState(undefined); // undefined = en cours de vérification, null = pas connecté
+  const [session, setSession] = useState(undefined); // undefined = vérification en cours, null = pas connecté
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [householdError, setHouseholdError] = useState("");
+  const [pendingJoinCode, setPendingJoinCode] = useState(() => getJoinCodeFromUrl());
+  const [myHouseholds, setMyHouseholds] = useState([]);
+  const [currentHouseholdId, setCurrentHouseholdId] = useState(null);
+  const [householdsReady, setHouseholdsReady] = useState(false);
   const [pseudo, setPseudo] = useState("");
   const [profiles, setProfiles] = useState([]);
   const [initialData, setInitialData] = useState(null);
@@ -1594,7 +1709,6 @@ function Root() {
   const [remoteVersion, setRemoteVersion] = useState(0);
   const [showAccount, setShowAccount] = useState(false);
   const [showFoyer, setShowFoyer] = useState(false);
-  const savingRef = useRef(false);
   const saveTimer = useRef(null);
 
   useEffect(() => {
@@ -1603,51 +1717,113 @@ function Root() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const refreshProfiles = async () => {
-    const { data } = await sb.from("courses_profiles").select("id, pseudo").order("pseudo");
-    if (data) setProfiles(data);
+  const loadMyHouseholds = async (uid) => {
+    const { data: memberships } = await sb.from("courses_household_members").select("household_id").eq("user_id", uid);
+    const ids = (memberships || []).map((m) => m.household_id);
+    if (!ids.length) { setMyHouseholds([]); return []; }
+    const { data: households } = await sb.from("courses_households").select("id, name").in("id", ids);
+    const list = (households || []).map((h) => ({ id: h.id, name: h.name || "Foyer" }));
+    setMyHouseholds(list);
+    return list;
   };
 
-  // Chargement initial des données partagées + profils, une fois connecté
+  const joinHousehold = async (uid, householdId) => {
+    const { data: hh } = await sb.from("courses_households").select("id").eq("id", householdId).maybeSingle();
+    if (!hh) return false;
+    await sb.from("courses_household_members").insert({ household_id: householdId, user_id: uid });
+    return true;
+  };
+
+  const refreshProfiles = async (householdId) => {
+    if (!householdId) return;
+    const { data: members } = await sb.from("courses_household_members").select("user_id").eq("household_id", householdId);
+    const ids = (members || []).map((m) => m.user_id);
+    if (!ids.length) { setProfiles([]); return; }
+    const { data: rows } = await sb.from("courses_profiles").select("id, pseudo").in("id", ids).order("pseudo");
+    setProfiles(rows || []);
+  };
+
+  // Détermine le foyer actif après connexion : lien d'invitation > foyer mémorisé > premier disponible
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
     (async () => {
-      const { data: profileRow } = await sb.from("courses_profiles").select("pseudo").eq("id", session.user.id).maybeSingle();
-      if (!cancelled) setPseudo(profileRow?.pseudo || session.user.email.split("@")[0]);
-
-      const { data: dataRow } = await sb.from("courses_data").select("*").eq("key", "shared").maybeSingle();
-      if (!dataRow) {
-        await sb.from("courses_data").insert({ key: "shared" });
-        if (!cancelled) setInitialData(emptyData);
-      } else if (!cancelled) {
-        setInitialData(rowToData(dataRow));
+      const uid = session.user.id;
+      let joinedId = null;
+      if (pendingJoinCode) {
+        const ok = await joinHousehold(uid, pendingJoinCode);
+        if (ok) joinedId = pendingJoinCode;
+        history.replaceState(null, "", location.pathname);
+        setPendingJoinCode("");
       }
-      await refreshProfiles();
+      const households = await loadMyHouseholds(uid);
+      if (cancelled) return;
+      if (!households.length) {
+        setCurrentHouseholdId(null);
+        setHouseholdsReady(true);
+        return;
+      }
+      const stored = joinedId || getStoredHouseholdId();
+      const match = households.find((h) => h.id === stored);
+      const active = match ? match.id : households[0].id;
+      setStoredHouseholdId(active);
+      setCurrentHouseholdId(active);
+      setHouseholdsReady(true);
     })();
     return () => { cancelled = true; };
   }, [session?.user?.id]);
 
-  // Abonnement temps réel : liste/recettes partagées + pseudos du foyer
+  // Pseudo global de l'utilisateur (indépendant du foyer)
   useEffect(() => {
     if (!session) return;
+    (async () => {
+      const { data: profileRow } = await sb.from("courses_profiles").select("pseudo").eq("id", session.user.id).maybeSingle();
+      setPseudo(profileRow?.pseudo || session.user.email.split("@")[0]);
+    })();
+  }, [session?.user?.id]);
+
+  // Chargement des données du foyer actif
+  useEffect(() => {
+    if (!session || !currentHouseholdId) return;
+    let cancelled = false;
+    setInitialData(null);
+    (async () => {
+      const { data: dataRow } = await sb.from("courses_data").select("*").eq("household_id", currentHouseholdId).maybeSingle();
+      if (!dataRow) {
+        await sb.from("courses_data").insert({ household_id: currentHouseholdId });
+        if (!cancelled) setInitialData(emptyData);
+      } else if (!cancelled) {
+        setInitialData(rowToData(dataRow));
+      }
+      await refreshProfiles(currentHouseholdId);
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id, currentHouseholdId]);
+
+  // Abonnement temps réel scopé au foyer actif
+  useEffect(() => {
+    if (!session || !currentHouseholdId) return;
     const channel = sb
-      .channel("courses_sync")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "courses_data", filter: "key=eq.shared" }, (payload) => {
-        if (payload.new.updated_by === session.user.id) return; // notre propre écriture, on ignore
+      .channel("courses_sync_" + currentHouseholdId)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "courses_data", filter: `household_id=eq.${currentHouseholdId}` }, (payload) => {
+        if (payload.new.updated_by === session.user.id) return;
         setRemoteData(rowToData(payload.new));
         setRemoteVersion((v) => v + 1);
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "courses_profiles" }, () => {
-        refreshProfiles();
+      .on("postgres_changes", { event: "*", schema: "public", table: "courses_household_members", filter: `household_id=eq.${currentHouseholdId}` }, () => {
+        refreshProfiles(currentHouseholdId);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "courses_households", filter: `id=eq.${currentHouseholdId}` }, (payload) => {
+        setMyHouseholds((hs) => hs.map((h) => (h.id === payload.new.id ? { ...h, name: payload.new.name } : h)));
       })
       .subscribe();
     return () => { sb.removeChannel(channel); };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, currentHouseholdId]);
 
-  const handleLogin = async ({ email, password, pseudo: typedPseudo }) => {
+  const handleLogin = async ({ email, password, pseudo: typedPseudo, code }) => {
     setLoginLoading(true);
     setLoginError("");
+    if (code && code.trim()) setPendingJoinCode(code.trim());
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       setLoginError(error.message || "Email ou mot de passe incorrect.");
@@ -1661,10 +1837,46 @@ function Root() {
     setLoginLoading(false);
   };
 
+  const handleCreateHousehold = async (name) => {
+    if (!session) return false;
+    const { data: hh, error } = await sb.from("courses_households").insert({ name: name || "Nouveau foyer" }).select().single();
+    if (error) { setHouseholdError(error.message); return false; }
+    await sb.from("courses_household_members").insert({ household_id: hh.id, user_id: session.user.id });
+    await loadMyHouseholds(session.user.id);
+    setStoredHouseholdId(hh.id);
+    setCurrentHouseholdId(hh.id);
+    setShowFoyer(false);
+    return true;
+  };
+
+  const handleJoinHousehold = async (code) => {
+    if (!session || !code) return false;
+    const ok = await joinHousehold(session.user.id, code);
+    if (!ok) { setHouseholdError("Code introuvable."); return false; }
+    await loadMyHouseholds(session.user.id);
+    setStoredHouseholdId(code);
+    setCurrentHouseholdId(code);
+    setShowFoyer(false);
+    return true;
+  };
+
+  const handleSwitchHousehold = (id) => {
+    setStoredHouseholdId(id);
+    setCurrentHouseholdId(id);
+    setShowFoyer(false);
+  };
+
+  const handleRenameHousehold = async (name) => {
+    if (!name || !currentHouseholdId) return false;
+    const { error } = await sb.from("courses_households").update({ name }).eq("id", currentHouseholdId);
+    if (!error) setMyHouseholds((hs) => hs.map((h) => (h.id === currentHouseholdId ? { ...h, name } : h)));
+    return !error;
+  };
+
   const handleSavePseudo = async (newPseudo) => {
     if (!newPseudo || !session) return false;
     const { error } = await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: newPseudo, updated_at: new Date().toISOString() });
-    if (!error) { setPseudo(newPseudo); refreshProfiles(); }
+    if (!error) { setPseudo(newPseudo); refreshProfiles(currentHouseholdId); }
     return !error;
   };
 
@@ -1677,17 +1889,17 @@ function Root() {
     await sb.auth.signOut();
     setInitialData(null);
     setRemoteData(null);
+    setCurrentHouseholdId(null);
+    setHouseholdsReady(false);
     setShowAccount(false);
   };
 
-  // Sauvegarde partagée (débounce léger pour éviter le spam pendant la saisie)
   const handleDataChange = (data) => {
-    if (!session) return;
+    if (!session || !currentHouseholdId) return;
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      savingRef.current = true;
       await sb.from("courses_data").upsert({
-        key: "shared",
+        household_id: currentHouseholdId,
         list: data.list,
         recipes: data.recipes,
         custom_products: data.customProducts,
@@ -1695,8 +1907,7 @@ function Root() {
         deleted_product_ids: data.deletedProductIds,
         updated_at: new Date().toISOString(),
         updated_by: session.user.id,
-      }, { onConflict: "key" });
-      setTimeout(() => { savingRef.current = false; }, 400);
+      }, { onConflict: "household_id" });
     }, 350);
   };
 
@@ -1704,14 +1915,23 @@ function Root() {
     return <div style={{ background: "#14171C", minHeight: "100vh" }} />;
   }
   if (session === null) {
-    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} />;
+    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} initialCode={pendingJoinCode} />;
+  }
+  if (!householdsReady) {
+    return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
+  }
+  if (!currentHouseholdId) {
+    return <HouseholdScreen onCreate={handleCreateHousehold} onJoin={handleJoinHousehold} error={householdError} />;
   }
   if (!initialData) {
     return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement du foyer…</div>;
   }
 
+  const currentHousehold = myHouseholds.find((h) => h.id === currentHouseholdId);
+  const inviteLink = location.origin + location.pathname + "#foyer=" + currentHouseholdId;
+
   return (
-    <div style={{ background: "#14171C", minHeight: "100vh" }}>
+    <div style={{ background: "#14171C", minHeight: "100vh", color: "#F5F3EE" }}>
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
         <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
         <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
@@ -1729,7 +1949,21 @@ function Root() {
           onLogout={handleLogout}
         />
       )}
-      {showFoyer && <FoyerModal profiles={profiles} myId={session.user.id} onClose={() => setShowFoyer(false)} />}
+      {showFoyer && (
+        <FoyerModal
+          householdName={currentHousehold?.name}
+          profiles={profiles}
+          myId={session.user.id}
+          myHouseholds={myHouseholds}
+          currentHouseholdId={currentHouseholdId}
+          inviteLink={inviteLink}
+          onClose={() => setShowFoyer(false)}
+          onRename={handleRenameHousehold}
+          onSwitch={handleSwitchHousehold}
+          onCreate={handleCreateHousehold}
+          onJoin={handleJoinHousehold}
+        />
+      )}
     </div>
   );
 }

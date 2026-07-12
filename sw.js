@@ -1,4 +1,4 @@
-const CACHE_NAME = 'liste-courses-v4';
+const CACHE_NAME = 'liste-courses-v6';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './prix.json'];
 
 self.addEventListener('install', (event) => {
