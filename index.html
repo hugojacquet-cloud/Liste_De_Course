@@ -376,7 +376,7 @@ const PRODUCTS = (() => {
   return out;
 })();
 
-const UNITS = ["unité", "g", "kg", "ml", "L", "paquet"];
+const UNITS = ["kg", "paquet"];
 
 // Toutes les icônes déjà utilisées dans la base, proposées dans le sélecteur d'icône
 const ALL_ICONS = [...new Set(PRODUCTS.map((p) => p.icon))];
@@ -397,24 +397,28 @@ function formatEuro(n) {
   return `${n.toFixed(2).replace(".", ",")} €`;
 }
 
-// Libellé court affiché sur une tuile produit : "4,99 €/kg" ou "1,76 €"
+// Libellé court affiché sur une tuile produit : "1,76 €/paquet" et/ou "4,99 €/kg"
 function formatProductPrice(product) {
-  if (product.price == null || product.price === "") return null;
-  return product.priceUnit === "kg" ? `${formatEuro(product.price)}/kg` : formatEuro(product.price);
+  const parts = [];
+  if (product.priceUnit != null && product.priceUnit !== "") parts.push(`${formatEuro(Number(product.priceUnit))}/paquet`);
+  if (product.priceKg != null && product.priceKg !== "") parts.push(`${formatEuro(Number(product.priceKg))}/kg`);
+  return parts.length ? parts.join(" · ") : null;
 }
 
-// Estime le coût d'un article de la liste à partir du prix renseigné sur le produit.
-// Renvoie null si aucune conversion fiable n'est possible (unité incompatible).
+// Estime le coût d'un article de la liste : prix au kg × qty si l'unité choisie est "kg",
+// prix à l'unité × qty si l'unité choisie est "paquet". Renvoie null si le prix correspondant est inconnu.
 function estimateItemPrice(item, product) {
-  if (!product || product.price == null || product.price === "") return null;
-  const price = Number(product.price);
-  if (Number.isNaN(price)) return null;
-  if (product.priceUnit === "kg") {
-    if (item.unit === "kg") return item.qty * price;
-    if (item.unit === "g") return (item.qty / 1000) * price;
-    return null;
+  if (!product) return null;
+  if (item.unit === "kg") {
+    if (product.priceKg == null || product.priceKg === "") return null;
+    const p = Number(product.priceKg);
+    return Number.isNaN(p) ? null : item.qty * p;
   }
-  if (item.unit === "unité" || item.unit === "paquet") return item.qty * price;
+  if (item.unit === "paquet") {
+    if (product.priceUnit == null || product.priceUnit === "") return null;
+    const p = Number(product.priceUnit);
+    return Number.isNaN(p) ? null : item.qty * p;
+  }
   return null;
 }
 
@@ -434,7 +438,7 @@ function estimateRecipeTotal(ingredients, products) {
 
 function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabel }) {
   const [qty, setQty] = useState(initial?.qty ?? 1);
-  const [unit, setUnit] = useState(initial?.unit ?? (product.priceUnit === "kg" ? "kg" : "unité"));
+  const [unit, setUnit] = useState(initial?.unit ?? (product.priceUnit != null && product.priceKg == null ? "paquet" : "kg"));
   const [note, setNote] = useState(initial?.note ?? "");
   const isEdit = !!initial;
   const c = catInfo(product.cat);
@@ -558,8 +562,8 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [name, setName] = useState(product?.name ?? "");
   const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
-  const [price, setPrice] = useState(product?.price != null ? String(product.price).replace(".", ",") : "");
-  const [priceUnit, setPriceUnit] = useState(product?.priceUnit ?? "unit");
+  const [priceUnit, setPriceUnit] = useState(product?.priceUnit != null ? String(product.priceUnit).replace(".", ",") : "");
+  const [priceKg, setPriceKg] = useState(product?.priceKg != null ? String(product.priceKg).replace(".", ",") : "");
   const c = catInfo(cat) || CATEGORIES[0];
   const isEdit = mode === "edit";
 
@@ -591,12 +595,19 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
         />
 
         <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Rayon</label>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "8px 0 20px" }}>
-          {CATEGORIES.map((cc) => (
-            <button key={cc.key} onClick={() => setCat(cc.key)} style={{ padding: "7px 12px", borderRadius: 999, fontSize: 12.5, fontWeight: 600, border: `1px solid ${cat === cc.key ? cc.accent : "#2A303A"}`, background: cat === cc.key ? cc.accent + "26" : "transparent", color: cat === cc.key ? cc.accent : "#9CA3AF", cursor: "pointer" }}>
-              {cc.label}
-            </button>
-          ))}
+        <div style={{ position: "relative", margin: "8px 0 20px" }}>
+          <select
+            value={cat}
+            onChange={(e) => setCat(e.target.value)}
+            style={{ width: "100%", appearance: "none", background: "#14171C", border: `1px solid ${c.accent}55`, borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, fontWeight: 600, padding: "12px 36px 12px 12px", outline: "none", fontFamily: "inherit", cursor: "pointer" }}
+          >
+            {CATEGORIES.map((cc) => (
+              <option key={cc.key} value={cc.key} style={{ background: "#1E232B", color: "#F5F3EE" }}>
+                {cc.label}
+              </option>
+            ))}
+          </select>
+          <ChevronLeft size={16} color="#8B93A1" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(-90deg)", pointerEvents: "none" }} />
         </div>
 
         <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
@@ -608,31 +619,36 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           ))}
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix (facultatif)</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 20px" }}>
-          <div style={{ position: "relative", flex: 1 }}>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={price}
-              onChange={(e) => setPrice(e.target.value.replace(/[^0-9,.]/g, ""))}
-              placeholder="0,00"
-              style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
-            />
-            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix (facultatif, les deux peuvent être renseignés)</label>
+        <div style={{ display: "flex", gap: 10, margin: "8px 0 20px" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11.5, color: "#6B7280", fontWeight: 600, marginBottom: 6 }}>À l'unité / au paquet</div>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={priceUnit}
+                onChange={(e) => setPriceUnit(e.target.value.replace(/[^0-9,.]/g, ""))}
+                placeholder="0,00"
+                style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+              />
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+            </div>
           </div>
-          <button
-            onClick={() => setPriceUnit("unit")}
-            style={{ padding: "11px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, border: `1px solid ${priceUnit === "unit" ? c.accent : "#2A303A"}`, background: priceUnit === "unit" ? c.accent + "26" : "transparent", color: priceUnit === "unit" ? c.accent : "#9CA3AF", cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            à l'unité
-          </button>
-          <button
-            onClick={() => setPriceUnit("kg")}
-            style={{ padding: "11px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, border: `1px solid ${priceUnit === "kg" ? c.accent : "#2A303A"}`, background: priceUnit === "kg" ? c.accent + "26" : "transparent", color: priceUnit === "kg" ? c.accent : "#9CA3AF", cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            au kg
-          </button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11.5, color: "#6B7280", fontWeight: 600, marginBottom: 6 }}>Au kg</div>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={priceKg}
+                onChange={(e) => setPriceKg(e.target.value.replace(/[^0-9,.]/g, ""))}
+                placeholder="0,00"
+                style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+              />
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+            </div>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
@@ -644,13 +660,14 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           <button
             disabled={!name.trim()}
             onClick={() => {
-              const trimmedPrice = price.trim().replace(",", ".");
+              const nUnit = priceUnit.trim().replace(",", ".");
+              const nKg = priceKg.trim().replace(",", ".");
               onSave({
                 name: name.trim(),
                 icon,
                 cat,
-                price: trimmedPrice ? Number(trimmedPrice) : null,
-                priceUnit,
+                priceUnit: nUnit ? Number(nUnit) : null,
+                priceKg: nKg ? Number(nKg) : null,
               });
             }}
             style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#2A303A" : c.accent, color: !name.trim() ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
@@ -982,7 +999,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
     return init;
   });
   const [customProducts, setCustomProducts] = useState(() => initialData?.customProducts ?? []); // articles créés par l'utilisateur
-  const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, price, priceUnit} } pour les articles de base modifiés
+  const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, priceUnit, priceKg} } pour les articles de base modifiés
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
   const [seedPrices, setSeedPrices] = useState({}); // prix issus de prix.json (tickets de caisse), rechargés à chaque visite
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
@@ -1020,8 +1037,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   const exportPrices = () => {
     const out = {};
     products.forEach((p) => {
-      if (p.price != null && p.price !== "") {
-        out[p.id] = { price: Number(p.price), priceUnit: p.priceUnit || "unit", updatedAt: new Date().toISOString().slice(0, 10) };
+      const hasUnit = p.priceUnit != null && p.priceUnit !== "";
+      const hasKg = p.priceKg != null && p.priceKg !== "";
+      if (hasUnit || hasKg) {
+        out[p.id] = {
+          priceUnit: hasUnit ? Number(p.priceUnit) : null,
+          priceKg: hasKg ? Number(p.priceKg) : null,
+          updatedAt: new Date().toISOString().slice(0, 10),
+        };
       }
     });
     const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
@@ -1038,7 +1061,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   const products = useMemo(() => {
     const applyPrice = (p) => {
       const seed = seedPrices[p.id];
-      return seed ? { ...p, price: seed.price, priceUnit: seed.priceUnit } : p;
+      return seed ? { ...p, priceUnit: seed.priceUnit, priceKg: seed.priceKg } : p;
     };
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
     const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyPrice).map(applyOverride);
@@ -1046,8 +1069,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds, seedPrices]);
 
-  const addCustomProduct = ({ name, icon, cat, price, priceUnit }) => {
-    const p = { id: `custom-${Date.now()}`, name, icon, cat, price: price ?? null, priceUnit: priceUnit ?? "unit" };
+  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg }) => {
+    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null };
     setCustomProducts((l) => [...l, p]);
     return p;
   };
@@ -1069,9 +1092,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   const openNewProductModal = () => setProductModal({ mode: "create" });
   const openEditProductModal = (product) => setProductModal({ mode: "edit", product });
   const closeProductModal = () => setProductModal(null);
-  const saveProductModal = ({ name, icon, cat, price, priceUnit }) => {
-    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, price, priceUnit });
-    else editProduct(productModal.product.id, { name, icon, cat, price, priceUnit });
+  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg });
+    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg });
     closeProductModal();
   };
   const deleteFromProductModal = () => {
@@ -1399,8 +1422,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
 // Remplace les deux valeurs ci-dessous par celles de TON nouveau projet
 // (Project Settings → API → Project URL / anon public key).
 // ══════════════════════════════════════════
-const SUPABASE_URL = "https://wpsubdmndqthdonousps.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3ViZG1uZHF0aGRvbm91c3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTU3MzUsImV4cCI6MjA5OTQzMTczNX0.sEtfKED9EwJoELfN8N3AkljfX9UmA-m8jbMAnXDzzO4";
+const SUPABASE_URL = "https://TON-PROJET.supabase.co";
+const SUPABASE_ANON_KEY = "TA_CLE_ANON_PUBLIQUE";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const emptyData = { list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
