@@ -1627,7 +1627,7 @@ function Root() {
     setLoginError("");
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
-      setLoginError("Email ou mot de passe incorrect.");
+      setLoginError(error.message || "Email ou mot de passe incorrect.");
       setLoginLoading(false);
       return;
     }
@@ -1716,4 +1716,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
 </script>
 </body>
 </html>
-    
