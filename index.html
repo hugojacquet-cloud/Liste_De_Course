@@ -417,6 +417,18 @@ function estimateItemPrice(item, product) {
   return null;
 }
 
+// Estime le coût total d'une recette (somme des ingrédients dont le prix est connu et l'unité compatible)
+function estimateRecipeTotal(ingredients, products) {
+  let total = 0;
+  let hasAny = false;
+  (ingredients || []).forEach((item) => {
+    const p = products.find((pr) => pr.id === item.productId);
+    const est = estimateItemPrice(item, p);
+    if (est != null) { total += est; hasAny = true; }
+  });
+  return hasAny ? total : null;
+}
+
 // --- Modal quantité / note --------------------------------------------------
 
 function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabel }) {
@@ -507,17 +519,19 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
     longPressed.current = false;
     timer.current = setTimeout(() => { longPressed.current = true; onEdit(); }, 480);
   };
-  const cancelPress = () => { if (timer.current) clearTimeout(timer.current); };
-  const endPress = () => {
-    cancelPress();
-    if (!longPressed.current && onQuickTap) onQuickTap();
+  const clearPress = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
+  const handleClick = () => {
+    if (longPressed.current) { longPressed.current = false; return; }
+    if (onQuickTap) onQuickTap();
   };
 
   return (
     <div
       onPointerDown={startPress}
-      onPointerUp={endPress}
-      onPointerLeave={cancelPress}
+      onPointerUp={clearPress}
+      onPointerLeave={clearPress}
+      onPointerCancel={clearPress}
+      onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
       style={{ background: c.tint, border: `1px solid ${c.accent}33`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer" }}
     >
@@ -656,14 +670,19 @@ function ProductTile({ product, cat, onTap, onLongPress }) {
     longPressed.current = false;
     timer.current = setTimeout(() => { longPressed.current = true; onLongPress(); }, 480);
   };
-  const cancel = () => { if (timer.current) clearTimeout(timer.current); };
-  const end = () => { cancel(); if (!longPressed.current) onTap(); };
+  const clear = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
+  const handleClick = () => {
+    if (longPressed.current) { longPressed.current = false; return; }
+    onTap();
+  };
 
   return (
     <button
       onPointerDown={start}
-      onPointerUp={end}
-      onPointerLeave={cancel}
+      onPointerUp={clear}
+      onPointerLeave={clear}
+      onPointerCancel={clear}
+      onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
       style={{ background: cat.tint, border: `1px solid ${cat.accent}33`, borderRadius: 14, padding: "12px 4px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer", userSelect: "none" }}
     >
@@ -751,7 +770,13 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
         style={{ width: "100%", marginTop: 8, marginBottom: 22, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "12px 14px", outline: "none", fontFamily: "inherit" }}
       />
 
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ingrédients</label>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ingrédients</label>
+        {(() => {
+          const total = estimateRecipeTotal(ingredients, products);
+          return total != null ? <span style={{ fontSize: 13, fontWeight: 700, color: "#F5F3EE" }}>≈ {formatEuro(total)}</span> : null;
+        })()}
+      </div>
       <div style={{ position: "relative", margin: "8px 0 18px" }}>
         <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10 }}>
           <Search size={18} color="#6B7280" strokeWidth={2.2} />
@@ -771,6 +796,9 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
                 <button key={p.id} onClick={() => openAdd(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{p.icon}</span>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{p.name}</span>
+                  {formatProductPrice(p) && (
+                    <span style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{formatProductPrice(p)}</span>
+                  )}
                   <Plus size={16} color="#6B7280" />
                 </button>
               );
@@ -876,12 +904,18 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
 function RecipeCard({ recipe, onOpen, onAddToList, products }) {
   const [added, setAdded] = useState(false);
   const preview = recipe.ingredients.slice(0, 5);
+  const total = estimateRecipeTotal(recipe.ingredients, products);
 
   return (
     <div style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 16, padding: 16, marginBottom: 14 }}>
       <div onClick={onOpen} style={{ cursor: "pointer" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{recipe.name}</h3>
+          <div>
+            <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{recipe.name}</h3>
+            {total != null && (
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#6B9B5E" }}>≈ {formatEuro(total)}</span>
+            )}
+          </div>
           <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 10 }}>
             {recipe.ingredients.length} ingrédient{recipe.ingredients.length > 1 ? "s" : ""}
             {recipe.steps?.length > 0 ? ` · ${recipe.steps.length} étape${recipe.steps.length > 1 ? "s" : ""}` : ""}
@@ -1211,7 +1245,12 @@ function App() {
                     <button key={p.id} onClick={() => openAddModal(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
                       <span style={{ width: 34, height: 34, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{p.icon}</span>
                       <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500 }}>{p.name}</span>
-                      <span style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{c.label}</span>
+                      <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                        <span style={{ fontSize: 10.5, color: c.accent, fontWeight: 600 }}>{c.label}</span>
+                        {formatProductPrice(p) && (
+                          <span style={{ fontSize: 11, color: "#F5F3EE", fontWeight: 700 }}>{formatProductPrice(p)}</span>
+                        )}
+                      </span>
                       <Plus size={16} color="#6B7280" />
                     </button>
                   );
