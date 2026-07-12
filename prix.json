@@ -1,0 +1,15 @@
+{
+  "citron": { "price": 4.99, "priceUnit": "kg", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "courgette": { "price": 2.99, "priceUnit": "kg", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "persil": { "price": 1.69, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "poivron": { "price": 5.99, "priceUnit": "kg", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "tomate": { "price": 4.99, "priceUnit": "kg", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "concombre": { "price": 2.49, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "nectarine": { "price": 5.99, "priceUnit": "kg", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "feta": { "price": 2.68, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "poitrine_porc": { "price": 4.57, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "thon": { "price": 2.49, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "vinaigre_balsamique": { "price": 1.59, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "cidre": { "price": 3.48, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" },
+  "pois_chiches": { "price": 1.20, "priceUnit": "unit", "updatedAt": "2026-07-04", "source": "Intermarché Noisy-le-Grand" }
+}

@@ -390,11 +390,38 @@ function normalize(str) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+// --- Prix -------------------------------------------------------------------
+
+function formatEuro(n) {
+  return `${n.toFixed(2).replace(".", ",")} €`;
+}
+
+// Libellé court affiché sur une tuile produit : "4,99 €/kg" ou "1,76 €"
+function formatProductPrice(product) {
+  if (product.price == null || product.price === "") return null;
+  return product.priceUnit === "kg" ? `${formatEuro(product.price)}/kg` : formatEuro(product.price);
+}
+
+// Estime le coût d'un article de la liste à partir du prix renseigné sur le produit.
+// Renvoie null si aucune conversion fiable n'est possible (unité incompatible).
+function estimateItemPrice(item, product) {
+  if (!product || product.price == null || product.price === "") return null;
+  const price = Number(product.price);
+  if (Number.isNaN(price)) return null;
+  if (product.priceUnit === "kg") {
+    if (item.unit === "kg") return item.qty * price;
+    if (item.unit === "g") return (item.qty / 1000) * price;
+    return null;
+  }
+  if (item.unit === "unité" || item.unit === "paquet") return item.qty * price;
+  return null;
+}
+
 // --- Modal quantité / note --------------------------------------------------
 
 function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabel }) {
   const [qty, setQty] = useState(initial?.qty ?? 1);
-  const [unit, setUnit] = useState(initial?.unit ?? "unité");
+  const [unit, setUnit] = useState(initial?.unit ?? (product.priceUnit === "kg" ? "kg" : "unité"));
   const [note, setNote] = useState(initial?.note ?? "");
   const isEdit = !!initial;
   const c = catInfo(product.cat);
@@ -499,7 +526,13 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
         {product.name}
         {item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
       </span>
-      <span style={{ fontSize: 10.5, color: "#8B93A1", fontWeight: 600 }}>{item.qty} {item.unit}</span>
+      <span style={{ fontSize: 10.5, color: "#8B93A1", fontWeight: 600 }}>
+        {item.qty} {item.unit}
+        {(() => {
+          const est = estimateItemPrice(item, product);
+          return est != null ? ` · ${formatEuro(est)}` : "";
+        })()}
+      </span>
     </div>
   );
 }
@@ -510,6 +543,8 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [name, setName] = useState(product?.name ?? "");
   const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
+  const [price, setPrice] = useState(product?.price != null ? String(product.price).replace(".", ",") : "");
+  const [priceUnit, setPriceUnit] = useState(product?.priceUnit ?? "unit");
   const c = catInfo(cat) || CATEGORIES[0];
   const isEdit = mode === "edit";
 
@@ -558,6 +593,33 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           ))}
         </div>
 
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix (facultatif)</label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0 20px" }}>
+          <div style={{ position: "relative", flex: 1 }}>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/[^0-9,.]/g, ""))}
+              placeholder="0,00"
+              style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+            />
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+          </div>
+          <button
+            onClick={() => setPriceUnit("unit")}
+            style={{ padding: "11px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, border: `1px solid ${priceUnit === "unit" ? c.accent : "#2A303A"}`, background: priceUnit === "unit" ? c.accent + "26" : "transparent", color: priceUnit === "unit" ? c.accent : "#9CA3AF", cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            à l'unité
+          </button>
+          <button
+            onClick={() => setPriceUnit("kg")}
+            style={{ padding: "11px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, border: `1px solid ${priceUnit === "kg" ? c.accent : "#2A303A"}`, background: priceUnit === "kg" ? c.accent + "26" : "transparent", color: priceUnit === "kg" ? c.accent : "#9CA3AF", cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            au kg
+          </button>
+        </div>
+
         <div style={{ display: "flex", gap: 10 }}>
           {isEdit && onDelete && (
             <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
@@ -566,7 +628,16 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           )}
           <button
             disabled={!name.trim()}
-            onClick={() => onSave({ name: name.trim(), icon, cat })}
+            onClick={() => {
+              const trimmedPrice = price.trim().replace(",", ".");
+              onSave({
+                name: name.trim(),
+                icon,
+                cat,
+                price: trimmedPrice ? Number(trimmedPrice) : null,
+                priceUnit,
+              });
+            }}
             style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#2A303A" : c.accent, color: !name.trim() ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
           >
             {isEdit ? "Enregistrer" : "Créer l'article"}
@@ -598,6 +669,9 @@ function ProductTile({ product, cat, onTap, onLongPress }) {
     >
       <span style={{ fontSize: 21 }}>{product.icon}</span>
       <span style={{ fontSize: 10.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2, color: "#F0EEE8" }}>{product.name}</span>
+      {formatProductPrice(product) && (
+        <span style={{ fontSize: 9.5, fontWeight: 700, color: cat.accent }}>{formatProductPrice(product)}</span>
+      )}
     </button>
   );
 }
@@ -881,10 +955,11 @@ function App() {
   }); // articles créés par l'utilisateur
   const [productOverrides, setProductOverrides] = useState(() => {
     try { return JSON.parse(localStorage.getItem("courses_product_overrides") || "{}"); } catch (e) { return {}; }
-  }); // { [id]: {name, icon, cat} } pour les articles de base modifiés
+  }); // { [id]: {name, icon, cat, price, priceUnit} } pour les articles de base modifiés
   const [deletedProductIds, setDeletedProductIds] = useState(() => {
     try { return JSON.parse(localStorage.getItem("courses_deleted_ids") || "[]"); } catch (e) { return []; }
   }); // ids d'articles (de base) supprimés
+  const [seedPrices, setSeedPrices] = useState({}); // prix issus de prix.json (tickets de caisse), rechargés à chaque visite
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
   const inputRef = useRef(null);
 
@@ -894,18 +969,49 @@ function App() {
   useEffect(() => { try { localStorage.setItem("courses_product_overrides", JSON.stringify(productOverrides)); } catch (e) {} }, [productOverrides]);
   useEffect(() => { try { localStorage.setItem("courses_deleted_ids", JSON.stringify(deletedProductIds)); } catch (e) {} }, [deletedProductIds]);
 
+  // Charge prix.json (prix relevés sur tickets de caisse) au démarrage.
+  // Silencieux si le fichier est absent ou inaccessible (ex: ouverture en double-clic sans serveur).
+  useEffect(() => {
+    fetch("./prix.json")
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data) => setSeedPrices(data || {}))
+      .catch(() => {});
+  }, []);
+
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
 
-  // Base + articles personnalisés, avec overrides et suppressions appliqués
+  // Génère et télécharge un prix.json avec tous les prix actuellement connus (tickets + saisies manuelles).
+  const exportPrices = () => {
+    const out = {};
+    products.forEach((p) => {
+      if (p.price != null && p.price !== "") {
+        out[p.id] = { price: Number(p.price), priceUnit: p.priceUnit || "unit", updatedAt: new Date().toISOString().slice(0, 10) };
+      }
+    });
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "prix.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Base + articles personnalisés, avec prix de tickets (prix.json), overrides manuels et suppressions appliqués.
+  // Ordre de priorité pour le prix : override manuel (productOverrides) > prix.json (tickets) > aucun prix.
   const products = useMemo(() => {
+    const applyPrice = (p) => {
+      const seed = seedPrices[p.id];
+      return seed ? { ...p, price: seed.price, priceUnit: seed.priceUnit } : p;
+    };
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
-    const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
+    const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyPrice).map(applyOverride);
     const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
     return [...base, ...customs];
-  }, [customProducts, productOverrides, deletedProductIds]);
+  }, [customProducts, productOverrides, deletedProductIds, seedPrices]);
 
-  const addCustomProduct = ({ name, icon, cat }) => {
-    const p = { id: `custom-${Date.now()}`, name, icon, cat };
+  const addCustomProduct = ({ name, icon, cat, price, priceUnit }) => {
+    const p = { id: `custom-${Date.now()}`, name, icon, cat, price: price ?? null, priceUnit: priceUnit ?? "unit" };
     setCustomProducts((l) => [...l, p]);
     return p;
   };
@@ -927,9 +1033,9 @@ function App() {
   const openNewProductModal = () => setProductModal({ mode: "create" });
   const openEditProductModal = (product) => setProductModal({ mode: "edit", product });
   const closeProductModal = () => setProductModal(null);
-  const saveProductModal = ({ name, icon, cat }) => {
-    if (productModal.mode === "create") addCustomProduct({ name, icon, cat });
-    else editProduct(productModal.product.id, { name, icon, cat });
+  const saveProductModal = ({ name, icon, cat, price, priceUnit }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, price, priceUnit });
+    else editProduct(productModal.product.id, { name, icon, cat, price, priceUnit });
     closeProductModal();
   };
   const deleteFromProductModal = () => {
@@ -1009,6 +1115,17 @@ function App() {
 
   const totalCount = list.length;
 
+  const estimatedTotal = useMemo(() => {
+    let total = 0;
+    let hasAny = false;
+    list.forEach((item) => {
+      const p = products.find((pr) => pr.id === item.productId);
+      const est = estimateItemPrice(item, p);
+      if (est != null) { total += est; hasAny = true; }
+    });
+    return hasAny ? total : null;
+  }, [list, products]);
+
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", justifyContent: "center" }}>
       <style>{`
@@ -1033,7 +1150,12 @@ function App() {
             </h1>
             {tab === "liste" && (
               <p style={{ color: "#6B7280", fontSize: 14, margin: "4px 0 0" }}>
-                {totalCount === 0 ? "Aucun article pour l'instant" : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
+                {totalCount === 0
+                  ? "Aucun article pour l'instant"
+                  : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
+                {estimatedTotal != null && (
+                  <span style={{ color: "#8B93A1" }}> · ≈ {formatEuro(estimatedTotal)}</span>
+                )}
               </p>
             )}
             {tab === "recettes" && (
@@ -1135,12 +1257,21 @@ function App() {
 
         {tab === "tous" && (
           <>
-            <button
-              onClick={openNewProductModal}
-              style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}
-            >
-              <Plus size={16} /> Nouvel article
-            </button>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <button
+                onClick={openNewProductModal}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                <Plus size={16} /> Nouvel article
+              </button>
+              <button
+                onClick={exportPrices}
+                title="Télécharger un prix.json avec tous les prix actuels"
+                style={{ padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#1E232B", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >
+                Exporter les prix
+              </button>
+            </div>
             {allGrouped.map((cat) => {
               const isCollapsed = !!collapsedCats[cat.key];
               return (
