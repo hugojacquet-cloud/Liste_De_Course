@@ -1,5 +1,5 @@
-const CACHE_NAME = 'liste-courses-v2';
-const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'liste-courses-v4';
+const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './prix.json'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

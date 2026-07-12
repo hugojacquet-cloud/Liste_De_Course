@@ -33,12 +33,13 @@ window.addEventListener('error', function (e) {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" crossorigin></script>
 </head>
 <body>
 <div id="root"></div>
 <div id="boot-error">
   <h2>⚠️ L'application n'a pas pu démarrer</h2>
-  <p>Vérifie ta connexion internet (React/Babel sont chargés depuis un CDN) puis recharge la page.</p>
+  <p>Vérifie ta connexion internet (React/Babel/Supabase sont chargés depuis un CDN) puis recharge la page.</p>
   <p style="opacity:.6;font-size:.8em" id="boot-error-msg"></p>
 </div>
 <script type="text/babel" data-presets="react">
@@ -967,41 +968,42 @@ function RecipeCard({ recipe, onOpen, onAddToList, products }) {
 
 // --- App -------------------------------------------------------------------
 
-function App() {
+function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
-  const [list, setList] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("courses_list") || "[]"); } catch (e) { return []; }
-  });
+  const [list, setList] = useState(() => initialData?.list ?? []);
   const [modalProduct, setModalProduct] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
-  const [recipes, setRecipes] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("courses_recipes") || "[]"); } catch (e) { return []; }
-  });
+  const [recipes, setRecipes] = useState(() => initialData?.recipes ?? []);
   const [recipeEditing, setRecipeEditing] = useState(null); // null | {} | recipe object
   const [collapsedCats, setCollapsedCats] = useState(() => {
     const init = {};
     CATEGORIES.forEach((c) => { init[c.key] = true; }); // rayons repliés par défaut dans "Tous les produits"
     return init;
   });
-  const [customProducts, setCustomProducts] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("courses_custom_products") || "[]"); } catch (e) { return []; }
-  }); // articles créés par l'utilisateur
-  const [productOverrides, setProductOverrides] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("courses_product_overrides") || "{}"); } catch (e) { return {}; }
-  }); // { [id]: {name, icon, cat, price, priceUnit} } pour les articles de base modifiés
-  const [deletedProductIds, setDeletedProductIds] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("courses_deleted_ids") || "[]"); } catch (e) { return []; }
-  }); // ids d'articles (de base) supprimés
+  const [customProducts, setCustomProducts] = useState(() => initialData?.customProducts ?? []); // articles créés par l'utilisateur
+  const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, price, priceUnit} } pour les articles de base modifiés
+  const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
   const [seedPrices, setSeedPrices] = useState({}); // prix issus de prix.json (tickets de caisse), rechargés à chaque visite
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
   const inputRef = useRef(null);
+  const lastAppliedRemoteVersion = useRef(0);
 
-  useEffect(() => { try { localStorage.setItem("courses_list", JSON.stringify(list)); } catch (e) {} }, [list]);
-  useEffect(() => { try { localStorage.setItem("courses_recipes", JSON.stringify(recipes)); } catch (e) {} }, [recipes]);
-  useEffect(() => { try { localStorage.setItem("courses_custom_products", JSON.stringify(customProducts)); } catch (e) {} }, [customProducts]);
-  useEffect(() => { try { localStorage.setItem("courses_product_overrides", JSON.stringify(productOverrides)); } catch (e) {} }, [productOverrides]);
-  useEffect(() => { try { localStorage.setItem("courses_deleted_ids", JSON.stringify(deletedProductIds)); } catch (e) {} }, [deletedProductIds]);
+  // Pousse les changements locaux vers le parent (qui synchronise avec Supabase)
+  useEffect(() => {
+    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds });
+  }, [list, recipes, customProducts, productOverrides, deletedProductIds]);
+
+  // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
+  useEffect(() => {
+    if (!remoteData || remoteVersion === lastAppliedRemoteVersion.current) return;
+    lastAppliedRemoteVersion.current = remoteVersion;
+    setList(remoteData.list ?? []);
+    setRecipes(remoteData.recipes ?? []);
+    setCustomProducts(remoteData.customProducts ?? []);
+    setProductOverrides(remoteData.productOverrides ?? {});
+    setDeletedProductIds(remoteData.deletedProductIds ?? []);
+  }, [remoteVersion]);
 
   // Charge prix.json (prix relevés sur tickets de caisse) au démarrage.
   // Silencieux si le fichier est absent ou inaccessible (ex: ouverture en double-clic sans serveur).
@@ -1391,7 +1393,325 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+// ══════════════════════════════════════════
+// SUPABASE — AUTH + SYNCHRONISATION TEMPS RÉEL
+// ⚠️ Projet Supabase INDÉPENDANT de celui du simulateur immobilier.
+// Remplace les deux valeurs ci-dessous par celles de TON nouveau projet
+// (Project Settings → API → Project URL / anon public key).
+// ══════════════════════════════════════════
+const SUPABASE_URL = "https://TON-PROJET.supabase.co";
+const SUPABASE_ANON_KEY = "TA_CLE_ANON_PUBLIQUE";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const emptyData = { list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
+
+function rowToData(row) {
+  if (!row) return emptyData;
+  return {
+    list: row.list ?? [],
+    recipes: row.recipes ?? [],
+    customProducts: row.custom_products ?? [],
+    productOverrides: row.product_overrides ?? {},
+    deletedProductIds: row.deleted_product_ids ?? [],
+  };
+}
+
+// --- Écran de connexion -----------------------------------------------------
+
+function LoginScreen({ onLogin, loading, error }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [pseudo, setPseudo] = useState("");
+
+  const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
+
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{ fontSize: 40, marginBottom: 10 }}>🧺</div>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, margin: 0 }}>Liste de Courses</h1>
+          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Connecte-toi pour accéder à la liste du foyer</p>
+        </div>
+
+        <label style={labelStyle}>Email</label>
+        <input style={inputStyle} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.com" />
+
+        <label style={labelStyle}>Mot de passe</label>
+        <input style={inputStyle} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") onLogin({ email, password, pseudo }); }} placeholder="••••••••" />
+
+        <label style={labelStyle}>Mon pseudo est</label>
+        <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") onLogin({ email, password, pseudo }); }} placeholder="ex : Marie" />
+
+        {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
+
+        <button
+          disabled={loading || !email || !password}
+          onClick={() => onLogin({ email, password, pseudo })}
+          style={{ width: "100%", padding: "14px 18px", borderRadius: 12, border: "none", background: loading || !email || !password ? "#2A303A" : "#6B9B5E", color: loading || !email || !password ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 15, cursor: loading || !email || !password ? "default" : "pointer" }}
+        >
+          {loading ? "Connexion…" : "Se connecter"}
+        </button>
+        <p style={{ color: "#4B5563", fontSize: 12, textAlign: "center", marginTop: 16, lineHeight: 1.5 }}>
+          Ton compte doit avoir été créé au préalable par l'administrateur du foyer.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// --- Modale "Mon compte" -----------------------------------------------------
+
+function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, onLogout }) {
+  const [pseudoInput, setPseudoInput] = useState(pseudo || "");
+  const [newPassword, setNewPassword] = useState("");
+  const [status, setStatus] = useState("");
+
+  const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit", marginTop: 8, marginBottom: 16, boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>👤 Mon compte</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <label style={labelStyle}>Email</label>
+        <input style={{ ...fieldStyle, opacity: 0.6 }} value={email} disabled />
+
+        <label style={labelStyle}>Mon pseudo</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
+          <input style={{ ...fieldStyle, margin: 0 }} value={pseudoInput} onChange={(e) => setPseudoInput(e.target.value)} />
+          <button
+            onClick={async () => { setStatus(""); const ok = await onSavePseudo(pseudoInput.trim()); setStatus(ok ? "✓ Enregistré" : "❌ Erreur"); }}
+            style={{ padding: "0 16px", borderRadius: 10, border: "none", background: "#2A303A", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+          >
+            OK
+          </button>
+        </div>
+
+        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "0 0 18px" }} />
+
+        <label style={labelStyle}>Changer de mot de passe</label>
+        <input style={fieldStyle} type="password" autoComplete="new-password" placeholder="Nouveau mot de passe" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+        <button
+          onClick={async () => {
+            if (newPassword.length < 6) { setStatus("❌ 6 caractères minimum"); return; }
+            const ok = await onChangePassword(newPassword);
+            setStatus(ok ? "✓ Mot de passe mis à jour" : "❌ Erreur");
+            if (ok) setNewPassword("");
+          }}
+          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 8 }}
+        >
+          Mettre à jour le mot de passe
+        </button>
+
+        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") ? "#6B9B5E" : "#C4574A", margin: "4px 0 4px" }}>{status}</p>}
+
+        <button
+          onClick={onLogout}
+          style={{ width: "100%", padding: "13px", borderRadius: 10, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 700, fontSize: 14, cursor: "pointer", marginTop: 14 }}
+        >
+          Se déconnecter
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// --- Modale "Mon foyer" ------------------------------------------------------
+
+function FoyerModal({ profiles, myId, onClose }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Mon foyer</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+        {profiles.length === 0 ? (
+          <p style={{ color: "#5B6270", fontSize: 13.5 }}>Personne d'autre pour l'instant.</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {profiles.map((p) => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#14171C", border: "1px solid #2A303A", borderRadius: 12, padding: "12px 14px" }}>
+                <span style={{ width: 34, height: 34, borderRadius: "50%", background: "#6B9B5E26", color: "#6B9B5E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                  {(p.pseudo || "?").slice(0, 1).toUpperCase()}
+                </span>
+                <span style={{ fontSize: 14.5, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
+                {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6B9B5E", fontWeight: 600 }}>Toi</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Racine : gère l'auth, le chargement et la synchro temps réel -----------
+
+function Root() {
+  const [session, setSession] = useState(undefined); // undefined = en cours de vérification, null = pas connecté
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [pseudo, setPseudo] = useState("");
+  const [profiles, setProfiles] = useState([]);
+  const [initialData, setInitialData] = useState(null);
+  const [remoteData, setRemoteData] = useState(null);
+  const [remoteVersion, setRemoteVersion] = useState(0);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showFoyer, setShowFoyer] = useState(false);
+  const savingRef = useRef(false);
+  const saveTimer = useRef(null);
+
+  useEffect(() => {
+    sb.auth.getSession().then(({ data }) => setSession(data.session ?? null));
+    const { data: sub } = sb.auth.onAuthStateChange((_event, s) => setSession(s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const refreshProfiles = async () => {
+    const { data } = await sb.from("courses_profiles").select("id, pseudo").order("pseudo");
+    if (data) setProfiles(data);
+  };
+
+  // Chargement initial des données partagées + profils, une fois connecté
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    (async () => {
+      const { data: profileRow } = await sb.from("courses_profiles").select("pseudo").eq("id", session.user.id).maybeSingle();
+      if (!cancelled) setPseudo(profileRow?.pseudo || session.user.email.split("@")[0]);
+
+      const { data: dataRow } = await sb.from("courses_data").select("*").eq("key", "shared").maybeSingle();
+      if (!dataRow) {
+        await sb.from("courses_data").insert({ key: "shared" });
+        if (!cancelled) setInitialData(emptyData);
+      } else if (!cancelled) {
+        setInitialData(rowToData(dataRow));
+      }
+      await refreshProfiles();
+    })();
+    return () => { cancelled = true; };
+  }, [session?.user?.id]);
+
+  // Abonnement temps réel : liste/recettes partagées + pseudos du foyer
+  useEffect(() => {
+    if (!session) return;
+    const channel = sb
+      .channel("courses_sync")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "courses_data", filter: "key=eq.shared" }, (payload) => {
+        if (payload.new.updated_by === session.user.id) return; // notre propre écriture, on ignore
+        setRemoteData(rowToData(payload.new));
+        setRemoteVersion((v) => v + 1);
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "courses_profiles" }, () => {
+        refreshProfiles();
+      })
+      .subscribe();
+    return () => { sb.removeChannel(channel); };
+  }, [session?.user?.id]);
+
+  const handleLogin = async ({ email, password, pseudo: typedPseudo }) => {
+    setLoginLoading(true);
+    setLoginError("");
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoginError("Email ou mot de passe incorrect.");
+      setLoginLoading(false);
+      return;
+    }
+    const uid = data.user.id;
+    const { data: existing } = await sb.from("courses_profiles").select("pseudo").eq("id", uid).maybeSingle();
+    const finalPseudo = typedPseudo.trim() || existing?.pseudo || email.split("@")[0];
+    await sb.from("courses_profiles").upsert({ id: uid, pseudo: finalPseudo, updated_at: new Date().toISOString() });
+    setLoginLoading(false);
+  };
+
+  const handleSavePseudo = async (newPseudo) => {
+    if (!newPseudo || !session) return false;
+    const { error } = await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: newPseudo, updated_at: new Date().toISOString() });
+    if (!error) { setPseudo(newPseudo); refreshProfiles(); }
+    return !error;
+  };
+
+  const handleChangePassword = async (newPassword) => {
+    const { error } = await sb.auth.updateUser({ password: newPassword });
+    return !error;
+  };
+
+  const handleLogout = async () => {
+    await sb.auth.signOut();
+    setInitialData(null);
+    setRemoteData(null);
+    setShowAccount(false);
+  };
+
+  // Sauvegarde partagée (débounce léger pour éviter le spam pendant la saisie)
+  const handleDataChange = (data) => {
+    if (!session) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      savingRef.current = true;
+      await sb.from("courses_data").upsert({
+        key: "shared",
+        list: data.list,
+        recipes: data.recipes,
+        custom_products: data.customProducts,
+        product_overrides: data.productOverrides,
+        deleted_product_ids: data.deletedProductIds,
+        updated_at: new Date().toISOString(),
+        updated_by: session.user.id,
+      }, { onConflict: "key" });
+      setTimeout(() => { savingRef.current = false; }, 400);
+    }, 350);
+  };
+
+  if (session === undefined) {
+    return <div style={{ background: "#14171C", minHeight: "100vh" }} />;
+  }
+  if (session === null) {
+    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} />;
+  }
+  if (!initialData) {
+    return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement du foyer…</div>;
+  }
+
+  return (
+    <div style={{ background: "#14171C", minHeight: "100vh" }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
+        <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
+        <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
+      </div>
+
+      <App initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} />
+
+      {showAccount && (
+        <AccountModal
+          email={session.user.email}
+          pseudo={pseudo}
+          onClose={() => setShowAccount(false)}
+          onSavePseudo={handleSavePseudo}
+          onChangePassword={handleChangePassword}
+          onLogout={handleLogout}
+        />
+      )}
+      {showFoyer && <FoyerModal profiles={profiles} myId={session.user.id} onClose={() => setShowFoyer(false)} />}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root />);
 
 </script>
 </body>
