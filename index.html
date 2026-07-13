@@ -767,6 +767,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
     setModalProduct(null);
     setEditingIngId(null);
   };
+  const removeIngredient = (ingId) => setIngredients((l) => l.filter((it) => it.ingId !== ingId));
 
   return (
     <div>
@@ -833,7 +834,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
           {ingredients.map((item) => {
             const product = products.find((p) => p.id === item.productId);
             if (!product) return null;
-            return <ItemCard key={item.ingId} item={item} product={product} onEdit={() => openEdit(item.ingId)} />;
+            return <ItemCard key={item.ingId} item={item} product={product} onEdit={() => openEdit(item.ingId)} onQuickTap={() => removeIngredient(item.ingId)} />;
           })}
         </div>
       )}
@@ -1000,8 +1001,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [customProducts, setCustomProducts] = useState(() => initialData?.customProducts ?? []); // articles créés par l'utilisateur
   const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, priceUnit, priceKg} } pour les articles de base modifiés
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
-  const [seedPrices, setSeedPrices] = useState({}); // prix issus de prix.json (tickets de caisse), rechargés à chaque visite
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
+  const priceImportRef = useRef(null);
   const inputRef = useRef(null);
   const lastAppliedRemoteVersion = useRef(0);
 
@@ -1026,31 +1027,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setDeletedProductIds(remoteData.deletedProductIds ?? []);
   }, [remoteVersion]);
 
-  // Charge prix.json (prix relevés sur tickets de caisse) au démarrage.
-  // Silencieux si le fichier est absent ou inaccessible (ex: ouverture en double-clic sans serveur).
-  // Compatible avec l'ancien format ({price, priceUnit:"kg"|"unit"}) comme le nouveau ({priceKg, priceUnit: nombre}).
-  useEffect(() => {
-    fetch("./prix.json")
-      .then((r) => (r.ok ? r.json() : {}))
-      .then((data) => {
-        const normalized = {};
-        Object.keys(data || {}).forEach((id) => {
-          const entry = data[id];
-          if (entry && (entry.priceKg !== undefined || typeof entry.priceUnit === "number")) {
-            normalized[id] = entry; // déjà au nouveau format
-          } else if (entry && entry.price != null) {
-            // ancien format : { price: number, priceUnit: "kg" | "unit" | ... }
-            normalized[id] = entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price };
-          }
-        });
-        setSeedPrices(normalized);
-      })
-      .catch(() => {});
-  }, []);
-
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
 
-  // Génère et télécharge un prix.json avec tous les prix actuellement connus (tickets + saisies manuelles).
+  // Génère et télécharge une sauvegarde de tous les prix actuellement connus (utile pour archiver, pas pour synchroniser :
+  // les prix vivent désormais uniquement dans productOverrides/customProducts, synchronisés en direct via Supabase).
   const exportPrices = () => {
     const out = {};
     products.forEach((p) => {
@@ -1073,18 +1053,40 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     URL.revokeObjectURL(url);
   };
 
-  // Base + articles personnalisés, avec prix de tickets (prix.json), overrides manuels et suppressions appliqués.
-  // Ordre de priorité pour le prix : override manuel (productOverrides) > prix.json (tickets) > aucun prix.
-  const products = useMemo(() => {
-    const applyPrice = (p) => {
-      const seed = seedPrices[p.id];
-      return seed ? { ...p, priceUnit: seed.priceUnit, priceKg: seed.priceKg } : p;
+  // Importe un fichier de prix (ancien ou nouveau format) et l'applique comme overrides.
+  // Import ponctuel : une fois fait, ces prix vivent dans productOverrides et se synchronisent
+  // normalement avec le reste du foyer, sans dépendre d'un fichier séparé.
+  const importPrices = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      let data;
+      try { data = JSON.parse(e.target.result); } catch (err) { return; }
+      setProductOverrides((prev) => {
+        const next = { ...prev };
+        Object.keys(data || {}).forEach((id) => {
+          const entry = data[id];
+          if (!entry) return;
+          const priced = entry.priceKg !== undefined || typeof entry.priceUnit === "number"
+            ? entry
+            : entry.price != null
+              ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
+              : null;
+          if (!priced) return;
+          next[id] = { ...(next[id] || {}), ...priced };
+        });
+        return next;
+      });
     };
+    reader.readAsText(file);
+  };
+
+  // Base + articles personnalisés, avec overrides manuels (prix, nom, icône, rayon) et suppressions appliqués.
+  const products = useMemo(() => {
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
-    const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyPrice).map(applyOverride);
+    const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
     const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
     return [...base, ...customs];
-  }, [customProducts, productOverrides, deletedProductIds, seedPrices]);
+  }, [customProducts, productOverrides, deletedProductIds]);
 
   const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg }) => {
     const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null };
@@ -1347,11 +1349,25 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               </button>
               <button
                 onClick={exportPrices}
-                title="Télécharger un prix.json avec tous les prix actuels"
+                title="Télécharger une sauvegarde des prix actuels"
                 style={{ padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#1E232B", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
               >
                 Exporter les prix
               </button>
+              <button
+                onClick={() => priceImportRef.current?.click()}
+                title="Importer un fichier de prix (ex: ancien prix.json) — appliqué une fois pour toutes, puis synchronisé avec le foyer"
+                style={{ padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#1E232B", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >
+                Importer des prix
+              </button>
+              <input
+                ref={priceImportRef}
+                type="file"
+                accept="application/json"
+                style={{ display: "none" }}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
+              />
             </div>
             {allGrouped.map((cat) => {
               const isCollapsed = !!collapsedCats[cat.key];
