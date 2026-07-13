@@ -545,15 +545,12 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
         {product.name}
         {item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
       </span>
-      <span style={{ fontSize: 10.5, color: "#8B93A1", fontWeight: 600 }}>
-        {item.qty} {item.unit}
-        {(() => {
-          const est = estimateItemPrice(item, product);
-          if (est != null) return ` · ${formatEuro(est)}`;
-          const base = formatProductPrice(product);
-          return base ? ` · ${base}` : "";
-        })()}
-      </span>
+      <span style={{ fontSize: 10.5, color: "#6B9B5E", fontWeight: 700 }}>{item.qty} {item.unit}</span>
+      {(() => {
+        const est = estimateItemPrice(item, product);
+        const priceText = est != null ? formatEuro(est) : formatProductPrice(product);
+        return priceText ? <span style={{ fontSize: 10.5, color: "#F5F3EE", fontWeight: 600 }}>{priceText}</span> : null;
+      })()}
     </div>
   );
 }
@@ -987,7 +984,7 @@ function RecipeCard({ recipe, onOpen, onAddToList, products }) {
 
 // --- App -------------------------------------------------------------------
 
-function App({ initialData, remoteData, remoteVersion, onDataChange }) {
+function App({ initialData, remoteData, remoteVersion, onDataChange, householdName }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [list, setList] = useState(() => initialData?.list ?? []);
@@ -1008,8 +1005,12 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   const inputRef = useRef(null);
   const lastAppliedRemoteVersion = useRef(0);
 
-  // Pousse les changements locaux vers le parent (qui synchronise avec Supabase)
+  // Pousse les changements locaux vers le parent (qui synchronise avec Supabase).
+  // skipNextPush évite de renvoyer un état qu'on vient tout juste de recevoir d'un autre
+  // utilisateur (sinon : boucle infinie de synchro entre les foyers connectés).
+  const skipNextPush = useRef(false);
   useEffect(() => {
+    if (skipNextPush.current) { skipNextPush.current = false; return; }
     if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds });
   }, [list, recipes, customProducts, productOverrides, deletedProductIds]);
 
@@ -1017,6 +1018,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
   useEffect(() => {
     if (!remoteData || remoteVersion === lastAppliedRemoteVersion.current) return;
     lastAppliedRemoteVersion.current = remoteVersion;
+    skipNextPush.current = true;
     setList(remoteData.list ?? []);
     setRecipes(remoteData.recipes ?? []);
     setCustomProducts(remoteData.customProducts ?? []);
@@ -1026,10 +1028,23 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
 
   // Charge prix.json (prix relevés sur tickets de caisse) au démarrage.
   // Silencieux si le fichier est absent ou inaccessible (ex: ouverture en double-clic sans serveur).
+  // Compatible avec l'ancien format ({price, priceUnit:"kg"|"unit"}) comme le nouveau ({priceKg, priceUnit: nombre}).
   useEffect(() => {
     fetch("./prix.json")
       .then((r) => (r.ok ? r.json() : {}))
-      .then((data) => setSeedPrices(data || {}))
+      .then((data) => {
+        const normalized = {};
+        Object.keys(data || {}).forEach((id) => {
+          const entry = data[id];
+          if (entry && (entry.priceKg !== undefined || typeof entry.priceUnit === "number")) {
+            normalized[id] = entry; // déjà au nouveau format
+          } else if (entry && entry.price != null) {
+            // ancien format : { price: number, priceUnit: "kg" | "unit" | ... }
+            normalized[id] = entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price };
+          }
+        });
+        setSeedPrices(normalized);
+      })
       .catch(() => {});
   }, []);
 
@@ -1204,7 +1219,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange }) {
           <header style={{ marginBottom: 18 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#8B93A1", fontSize: 13, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
               <ShoppingBasket size={16} strokeWidth={2.2} />
-              Maison
+              {householdName || "Foyer"}
             </div>
             <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
               {tab === "liste" ? "Ma liste" : tab === "tous" ? "Tous les produits" : "Recettes"}
@@ -1603,11 +1618,12 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, 
 
 // --- Modale "Mon foyer" ------------------------------------------------------
 
-function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseholdId, inviteLink, onClose, onRename, onSwitch, onCreate, onJoin }) {
+function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseholdId, inviteLink, onClose, onRename, onSwitch, onCreate, onJoin, onDelete }) {
   const [nameInput, setNameInput] = useState(householdName || "");
   const [joinCode, setJoinCode] = useState("");
   const [newName, setNewName] = useState("");
   const [status, setStatus] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" };
@@ -1686,6 +1702,32 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
         </div>
 
         {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") ? "#6B9B5E" : "#C4574A", marginTop: 16 }}>{status}</p>}
+
+        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "22px 0 16px" }} />
+        <label style={{ ...labelStyle, color: "#C4574A" }}>Zone dangereuse</label>
+        {!confirmDelete ? (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 10 }}
+          >
+            🗑️ Supprimer ce foyer
+          </button>
+        ) : (
+          <div style={{ marginTop: 10, background: "#2A1414", border: "1px solid #C4574A55", borderRadius: 10, padding: 14 }}>
+            <p style={{ fontSize: 12.5, color: "#F5F3EE", margin: "0 0 12px", lineHeight: 1.5 }}>
+              Supprimer "{householdName}" effacera la liste, les recettes et l'accès pour tous ses membres, définitivement. Continuer ?
+            </p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+              <button
+                onClick={async () => { const ok = await onDelete(); if (!ok) { setStatus("❌ Erreur"); setConfirmDelete(false); } }}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              >
+                Oui, supprimer
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1782,20 +1824,33 @@ function Root() {
     })();
   }, [session?.user?.id]);
 
-  // Chargement des données du foyer actif
+  // Chargement des données du foyer actif (avec repli hors-ligne sur le cache local si Supabase est injoignable)
+  const [offline, setOffline] = useState(false);
   useEffect(() => {
     if (!session || !currentHouseholdId) return;
     let cancelled = false;
     setInitialData(null);
+    setOffline(false);
     (async () => {
-      const { data: dataRow } = await sb.from("courses_data").select("*").eq("household_id", currentHouseholdId).maybeSingle();
-      if (!dataRow) {
-        await sb.from("courses_data").insert({ household_id: currentHouseholdId });
-        if (!cancelled) setInitialData(emptyData);
-      } else if (!cancelled) {
-        setInitialData(rowToData(dataRow));
+      try {
+        const { data: dataRow, error } = await sb.from("courses_data").select("*").eq("household_id", currentHouseholdId).maybeSingle();
+        if (error) throw error;
+        if (!dataRow) {
+          await sb.from("courses_data").insert({ household_id: currentHouseholdId });
+          if (!cancelled) setInitialData(emptyData);
+        } else if (!cancelled) {
+          setInitialData(rowToData(dataRow));
+        }
+        await refreshProfiles(currentHouseholdId);
+      } catch (e) {
+        // Pas de réseau / Supabase injoignable : on retombe sur la dernière copie connue en local (lecture seule)
+        if (cancelled) return;
+        try {
+          const cached = JSON.parse(localStorage.getItem("courses_cache_" + currentHouseholdId) || "null");
+          setInitialData(cached || emptyData);
+        } catch (e2) { setInitialData(emptyData); }
+        setOffline(true);
       }
-      await refreshProfiles(currentHouseholdId);
     })();
     return () => { cancelled = true; };
   }, [session?.user?.id, currentHouseholdId]);
@@ -1873,6 +1928,26 @@ function Root() {
     return !error;
   };
 
+  // Supprime définitivement le foyer actif (cascade : membres + données + le foyer lui-même).
+  // Bascule automatiquement sur un autre foyer restant, ou vers l'écran "créer/rejoindre" s'il n'en reste aucun.
+  const handleDeleteHousehold = async () => {
+    if (!currentHouseholdId) return false;
+    const { error } = await sb.from("courses_households").delete().eq("id", currentHouseholdId);
+    if (error) return false;
+    try { localStorage.removeItem("courses_cache_" + currentHouseholdId); } catch (e) {}
+    const remaining = myHouseholds.filter((h) => h.id !== currentHouseholdId);
+    setMyHouseholds(remaining);
+    if (remaining.length) {
+      setStoredHouseholdId(remaining[0].id);
+      setCurrentHouseholdId(remaining[0].id);
+    } else {
+      try { localStorage.removeItem("courses_active_household_id"); } catch (e) {}
+      setCurrentHouseholdId(null);
+    }
+    setShowFoyer(false);
+    return true;
+  };
+
   const handleSavePseudo = async (newPseudo) => {
     if (!newPseudo || !session) return false;
     const { error } = await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: newPseudo, updated_at: new Date().toISOString() });
@@ -1894,22 +1969,43 @@ function Root() {
     setShowAccount(false);
   };
 
+  const lastLocalData = useRef(null);
+
+  const pushToSupabase = async (householdId, data, userId) => {
+    return sb.from("courses_data").upsert({
+      household_id: householdId,
+      list: data.list,
+      recipes: data.recipes,
+      custom_products: data.customProducts,
+      product_overrides: data.productOverrides,
+      deleted_product_ids: data.deletedProductIds,
+      updated_at: new Date().toISOString(),
+      updated_by: userId,
+    }, { onConflict: "household_id" });
+  };
+
   const handleDataChange = (data) => {
     if (!session || !currentHouseholdId) return;
+    lastLocalData.current = data;
+    // Cache local immédiat (lecture de secours hors-ligne) — indépendant de la synchro Supabase
+    try { localStorage.setItem("courses_cache_" + currentHouseholdId, JSON.stringify(data)); } catch (e) {}
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      await sb.from("courses_data").upsert({
-        household_id: currentHouseholdId,
-        list: data.list,
-        recipes: data.recipes,
-        custom_products: data.customProducts,
-        product_overrides: data.productOverrides,
-        deleted_product_ids: data.deletedProductIds,
-        updated_at: new Date().toISOString(),
-        updated_by: session.user.id,
-      }, { onConflict: "household_id" });
+      const { error } = await pushToSupabase(currentHouseholdId, data, session.user.id);
+      setOffline(!!error);
     }, 350);
   };
+
+  // Dès que la connexion revient, retente d'envoyer la dernière version locale connue
+  useEffect(() => {
+    const onOnline = async () => {
+      if (!session || !currentHouseholdId || !lastLocalData.current) return;
+      const { error } = await pushToSupabase(currentHouseholdId, lastLocalData.current, session.user.id);
+      if (!error) setOffline(false);
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [session?.user?.id, currentHouseholdId]);
 
   if (session === undefined) {
     return <div style={{ background: "#14171C", minHeight: "100vh" }} />;
@@ -1932,12 +2028,17 @@ function Root() {
 
   return (
     <div style={{ background: "#14171C", minHeight: "100vh", color: "#F5F3EE" }}>
+      {offline && (
+        <div style={{ background: "#3A2A10", color: "#F7C44F", fontSize: 12.5, fontWeight: 600, textAlign: "center", padding: "8px 12px" }}>
+          ⚠️ Hors-ligne — tes changements sont gardés sur cet appareil et seront envoyés dès que la connexion revient
+        </div>
+      )}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
         <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
         <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
       </div>
 
-      <App initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} />
+      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} />
 
       {showAccount && (
         <AccountModal
@@ -1962,6 +2063,7 @@ function Root() {
           onSwitch={handleSwitchHousehold}
           onCreate={handleCreateHousehold}
           onJoin={handleJoinHousehold}
+          onDelete={handleDeleteHousehold}
         />
       )}
     </div>
