@@ -438,7 +438,7 @@ function estimateRecipeTotal(ingredients, products) {
 
 function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabel }) {
   const [qty, setQty] = useState(initial?.qty ?? 1);
-  const [unit, setUnit] = useState(initial?.unit ?? (product.priceUnit != null && product.priceKg == null ? "paquet" : "kg"));
+  const [unit, setUnit] = useState(initial?.unit ?? "paquet");
   const [note, setNote] = useState(initial?.note ?? "");
   const isEdit = !!initial;
   const c = catInfo(product.cat);
@@ -680,7 +680,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
 }
 
 // Tuile produit de l'onglet "Tous les produits" : appui court = ajouter à la liste, appui long = éditer
-function ProductTile({ product, cat, onTap, onLongPress }) {
+function ProductTile({ product, cat, inList, onTap, onLongPress }) {
   const timer = useRef(null);
   const longPressed = useRef(false);
   const start = () => {
@@ -701,12 +701,12 @@ function ProductTile({ product, cat, onTap, onLongPress }) {
       onPointerCancel={clear}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: cat.tint, border: `1px solid ${cat.accent}33`, borderRadius: 14, padding: "12px 4px 10px", display: "flex", flexDirection: "column", alignItems: "center", gap: 5, cursor: "pointer", userSelect: "none" }}
+      style={{ background: inList ? "#1B2A1C" : cat.tint, border: `1px solid ${inList ? "#6B9B5E" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
     >
-      <span style={{ fontSize: 21 }}>{product.icon}</span>
-      <span style={{ fontSize: 10.5, fontWeight: 600, textAlign: "center", lineHeight: 1.2, color: "#F0EEE8" }}>{product.name}</span>
+      <span style={{ fontSize: 25 }}>{product.icon}</span>
+      <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "#8FCB7E" : "#F0EEE8" }}>{product.name}</span>
       {formatProductPrice(product) && (
-        <span style={{ fontSize: 9.5, fontWeight: 700, color: cat.accent }}>{formatProductPrice(product)}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: inList ? "#6B9B5E" : cat.accent }}>{formatProductPrice(product)}</span>
       )}
     </button>
   );
@@ -919,14 +919,33 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
 
 // --- Carte recette (vue liste) -----------------------------------------------
 
-function RecipeCard({ recipe, onOpen, onAddToList, products }) {
+function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
   const [added, setAdded] = useState(false);
   const preview = recipe.ingredients.slice(0, 5);
   const total = estimateRecipeTotal(recipe.ingredients, products);
+  const timer = useRef(null);
+  const longPressed = useRef(false);
+  const start = () => {
+    longPressed.current = false;
+    timer.current = setTimeout(() => { longPressed.current = true; onLongPress(); }, 480);
+  };
+  const clear = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } };
+  const handleClick = () => {
+    if (longPressed.current) { longPressed.current = false; return; }
+    onOpen();
+  };
 
   return (
     <div style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 16, padding: 16, marginBottom: 14 }}>
-      <div onClick={onOpen} style={{ cursor: "pointer" }}>
+      <div
+        onPointerDown={start}
+        onPointerUp={clear}
+        onPointerLeave={clear}
+        onPointerCancel={clear}
+        onClick={handleClick}
+        onContextMenu={(e) => e.preventDefault()}
+        style={{ cursor: "pointer", userSelect: "none" }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{recipe.name}</h3>
@@ -985,7 +1004,7 @@ function RecipeCard({ recipe, onOpen, onAddToList, products }) {
 
 // --- App -------------------------------------------------------------------
 
-function App({ initialData, remoteData, remoteVersion, onDataChange, householdName }) {
+function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [list, setList] = useState(() => initialData?.list ?? []);
@@ -1146,6 +1165,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   }, [list, products]);
 
   const allGrouped = useMemo(() => CATEGORIES.map((c) => ({ ...c, products: products.filter((p) => p.cat === c.key) })), [products]);
+  const listedProductIds = useMemo(() => new Set(list.map((i) => i.productId)), [list]);
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
   const openEditModal = (listId) => {
@@ -1190,6 +1210,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     });
     setRecipeEditing(null);
   };
+  const [confirmDeleteRecipe, setConfirmDeleteRecipe] = useState(null); // recette en attente de confirmation de suppression
+  const deleteRecipe = (id) => {
+    setRecipes((r) => r.filter((x) => x.id !== id));
+    setConfirmDeleteRecipe(null);
+  };
 
   const totalCount = list.length;
 
@@ -1231,9 +1256,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 {totalCount === 0
                   ? "Aucun article pour l'instant"
                   : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
-                {estimatedTotal != null && (
-                  <span style={{ color: "#8B93A1" }}> · ≈ {formatEuro(estimatedTotal)}</span>
-                )}
+              </p>
+            )}
+            {tab === "liste" && estimatedTotal != null && (
+              <p style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 0", color: estimatedTotal < 70 ? "#6B9B5E" : "#C4574A" }}>
+                ≈ {formatEuro(estimatedTotal)}
               </p>
             )}
             {tab === "recettes" && (
@@ -1347,20 +1374,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               >
                 <Plus size={16} /> Nouvel article
               </button>
-              <button
-                onClick={exportPrices}
-                title="Télécharger une sauvegarde des prix actuels"
-                style={{ padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#1E232B", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-              >
-                Exporter les prix
-              </button>
-              <button
-                onClick={() => priceImportRef.current?.click()}
-                title="Importer un fichier de prix (ex: ancien prix.json) — appliqué une fois pour toutes, puis synchronisé avec le foyer"
-                style={{ padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#1E232B", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-              >
-                Importer des prix
-              </button>
               <input
                 ref={priceImportRef}
                 type="file"
@@ -1387,9 +1400,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                     />
                   </div>
                   {!isCollapsed && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                       {cat.products.map((p) => (
-                        <ProductTile key={p.id} product={p} cat={cat} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
+                        <ProductTile key={p.id} product={p} cat={cat} inList={listedProductIds.has(p.id)} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
                       ))}
                     </div>
                   )}
@@ -1418,7 +1431,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 </div>
               ) : (
                 recipes.map((r) => (
-                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onAddToList={addRecipeToList} products={products} />
+                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onAddToList={addRecipeToList} onLongPress={() => setConfirmDeleteRecipe(r)} products={products} />
                 ))
               )}
             </>
@@ -1444,6 +1457,73 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           onSave={saveProductModal}
           onDelete={productModal.mode === "edit" ? deleteFromProductModal : null}
         />
+      )}
+
+      {confirmDeleteRecipe && (
+        <div
+          onClick={() => setConfirmDeleteRecipe(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Supprimer cette recette ?</div>
+            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+              « {confirmDeleteRecipe.name} » sera définitivement supprimée. Cette action est irréversible.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmDeleteRecipe(null)}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => deleteRecipe(confirmDeleteRecipe.id)}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {optionsOpen && (
+        <div
+          onClick={onCloseOptions}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 17, fontWeight: 700 }}>🛠️ Options</span>
+              <button onClick={onCloseOptions} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} />
+              </button>
+            </div>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix</label>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button
+                onClick={exportPrices}
+                title="Télécharger une sauvegarde des prix actuels"
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#14171C", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+              >
+                Exporter les prix
+              </button>
+              <button
+                onClick={() => priceImportRef.current?.click()}
+                title="Importer un fichier de prix — appliqué une fois pour toutes, puis synchronisé avec le foyer"
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#14171C", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+              >
+                Importer des prix
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1767,6 +1847,7 @@ function Root() {
   const [remoteVersion, setRemoteVersion] = useState(0);
   const [showAccount, setShowAccount] = useState(false);
   const [showFoyer, setShowFoyer] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const saveTimer = useRef(null);
 
   useEffect(() => {
@@ -2050,11 +2131,12 @@ function Root() {
         </div>
       )}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
+        <button onClick={() => setShowOptions(true)} title="Options" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🛠️</button>
         <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
         <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
       </div>
 
-      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} />
+      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} />
 
       {showAccount && (
         <AccountModal
