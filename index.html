@@ -80,6 +80,14 @@ const ShoppingBasket = (p) => (
     <line x1="15" y1="13" x2="15" y2="16" />
   </Icon>
 );
+
+// Affiche l'icône d'un produit : un emoji texte, ou une image importée localement (data URL).
+function IconGlyph({ icon, size = 20, style }) {
+  if (typeof icon === "string" && icon.startsWith("data:image")) {
+    return <img src={icon} alt="" style={{ width: size, height: size, objectFit: "contain", borderRadius: 4, display: "inline-block", verticalAlign: "middle", ...style }} />;
+  }
+  return <span style={{ fontSize: size, lineHeight: 1, ...style }}>{icon}</span>;
+}
 const ListChecks = (p) => (
   <Icon {...p}>
     <polyline points="3 6 4.5 7.5 7 5" />
@@ -397,6 +405,13 @@ function normalize(str) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+// Un produit correspond à la recherche si son nom OU l'un de ses sous-produits/variétés correspond
+// (ex : taper "patates" trouve "Pomme de terre" si "Patates" est enregistré comme sous-produit).
+function productMatchesQuery(product, normalizedQuery) {
+  if (normalize(product.name).includes(normalizedQuery)) return true;
+  return (product.variants || []).some((v) => normalize(v.name).includes(normalizedQuery));
+}
+
 // --- Prix -------------------------------------------------------------------
 
 function formatEuro(n) {
@@ -462,7 +477,7 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>
-            {product.icon}
+            <IconGlyph icon={product.icon} size={24} />
           </span>
           <div>
             <div style={{ fontSize: 17, fontWeight: 700 }}>{product.name}</div>
@@ -546,7 +561,7 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
       onContextMenu={(e) => e.preventDefault()}
       style={{ background: c.tint, border: `1px solid ${c.accent}33`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer" }}
     >
-      <span style={{ fontSize: small ? 21 : 26 }}>{product.icon}</span>
+      <span style={{ fontSize: small ? 21 : 26 }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
       <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: "#F0EEE8" }}>
         {product.name}
         {item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
@@ -563,7 +578,8 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
 
 // --- Création / édition d'un article (onglet "Tous les produits") ----------
 
-function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete }) {
+function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete, customIcons, onAddCustomIcon }) {
+  const iconImportRef = useRef(null);
   const [name, setName] = useState(product?.name ?? "");
   const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
@@ -592,7 +608,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>
-            {icon}
+            <IconGlyph icon={icon} size={24} />
           </span>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{isEdit ? "Modifier l'article" : "Nouvel article"}</div>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -624,11 +640,30 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           <ChevronLeft size={16} color="#8B93A1" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(-90deg)", pointerEvents: "none" }} />
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+          <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
+          <button
+            onClick={() => iconImportRef.current?.click()}
+            style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#8B93A1", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}
+          >
+            <Plus size={12} /> Ajouter icône
+          </button>
+          <input
+            ref={iconImportRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onAddCustomIcon(file, (dataUrl) => setIcon(dataUrl));
+              e.target.value = "";
+            }}
+          />
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6, margin: "8px 0 22px", maxHeight: 180, overflowY: "auto", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, padding: 8 }}>
-          {ALL_ICONS.map((ic, i) => (
-            <button key={ic + i} onClick={() => setIcon(ic)} style={{ fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer" }}>
-              {ic}
+          {[...customIcons, ...ALL_ICONS].map((ic, i) => (
+            <button key={ic + i} onClick={() => setIcon(ic)} style={{ fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <IconGlyph icon={ic} size={18} />
             </button>
           ))}
         </div>
@@ -757,7 +792,7 @@ function ProductTile({ product, cat, inList, onTap, onLongPress }) {
       onContextMenu={(e) => e.preventDefault()}
       style={{ background: inList ? "#1B2A1C" : cat.tint, border: `1px solid ${inList ? "#6B9B5E" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
     >
-      <span style={{ fontSize: 25 }}>{product.icon}</span>
+      <span style={{ fontSize: 25 }}><IconGlyph icon={product.icon} size={25} /></span>
       <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "#8FCB7E" : "#F0EEE8" }}>{product.name}</span>
       {formatProductPrice(product) && (
         <span style={{ fontSize: 10.5, fontWeight: 700, color: inList ? "#6B9B5E" : cat.accent }}>{formatProductPrice(product)}</span>
@@ -797,7 +832,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return [];
-    return products.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
+    return products.filter((p) => productMatchesQuery(p, q)).slice(0, 7);
   }, [query, products]);
 
   const openAdd = (product) => { setModalProduct(product); setEditingIngId(null); setQuery(""); };
@@ -866,7 +901,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
               const c = catInfo(p.cat);
               return (
                 <button key={p.id} onClick={() => openAdd(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{p.icon}</span>
+                  <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}><IconGlyph icon={p.icon} size={16} /></span>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{p.name}</span>
                   {formatProductPrice(p) && (
                     <span style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{formatProductPrice(p)}</span>
@@ -1018,7 +1053,7 @@ function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
             if (!p) return null;
             return (
               <span key={item.ingId} style={{ width: 30, height: 30, borderRadius: 8, background: catInfo(p.cat).accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>
-                {p.icon}
+                <IconGlyph icon={p.icon} size={15} />
               </span>
             );
           })}
@@ -1074,6 +1109,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [customProducts, setCustomProducts] = useState(() => initialData?.customProducts ?? []); // articles créés par l'utilisateur
   const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, priceUnit, priceKg} } pour les articles de base modifiés
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
+  const [customIcons, setCustomIcons] = useState(() => initialData?.customIcons ?? []); // icônes/emoji perso importés (data URLs)
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
   const priceImportRef = useRef(null);
   const inputRef = useRef(null);
@@ -1085,8 +1121,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const skipNextPush = useRef(false);
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
-    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds });
-  }, [list, recipes, customProducts, productOverrides, deletedProductIds]);
+    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons });
+  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons]);
 
   // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
   useEffect(() => {
@@ -1098,6 +1134,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setCustomProducts(remoteData.customProducts ?? []);
     setProductOverrides(remoteData.productOverrides ?? {});
     setDeletedProductIds(remoteData.deletedProductIds ?? []);
+    setCustomIcons(remoteData.customIcons ?? []);
   }, [remoteVersion]);
 
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
@@ -1184,6 +1221,31 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const openNewProductModal = () => setProductModal({ mode: "create" });
   const openEditProductModal = (product) => setProductModal({ mode: "edit", product });
   const closeProductModal = () => setProductModal(null);
+  // Importe une image locale comme icône perso : redimensionnée en 64x64 pour rester légère
+  // (stockée en base64, synchronisée avec le reste des données du foyer), puis ajoutée à la bibliothèque.
+  const addCustomIcon = (file, onReady) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 64;
+        const canvas = document.createElement("canvas");
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const scale = Math.min(size / img.width, size / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        const dataUrl = canvas.toDataURL("image/png");
+        setCustomIcons((list) => (list.includes(dataUrl) ? list : [dataUrl, ...list]));
+        if (onReady) onReady(dataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
     if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, variants });
     else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, variants });
@@ -1197,7 +1259,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (!q) return [];
-    return products.filter((p) => normalize(p.name).includes(q)).slice(0, 7);
+    return products.filter((p) => productMatchesQuery(p, q)).slice(0, 7);
   }, [query, products]);
 
   const addCustomFromSearch = () => {
@@ -1374,7 +1436,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                   const c = catInfo(p.cat);
                   return (
                     <button key={p.id} onClick={() => openAddModal(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
-                      <span style={{ width: 34, height: 34, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{p.icon}</span>
+                      <span style={{ width: 34, height: 34, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}><IconGlyph icon={p.icon} size={17} /></span>
                       <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500 }}>{p.name}</span>
                       <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                         <span style={{ fontSize: 10.5, color: c.accent, fontWeight: 600 }}>{c.label}</span>
@@ -1516,6 +1578,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           onClose={closeProductModal}
           onSave={saveProductModal}
           onDelete={productModal.mode === "edit" ? deleteFromProductModal : null}
+          customIcons={customIcons}
+          onAddCustomIcon={addCustomIcon}
         />
       )}
 
