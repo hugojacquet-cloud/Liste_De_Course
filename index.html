@@ -344,6 +344,9 @@ const RAW_PRODUCTS = [
   ["ficelle","Ficelle","🧵"],["colle","Colle","🧴"],["peinture","Peinture","🎨"],
   ["pinceaux","Pinceaux","🖌️"],["papier_cadeau_art","Papier cadeau","🎁"],["bougies_art","Bougies","🕯️"],
   ["ruban_adhesif","Ruban adhésif","📏"],["sacs_plantation","Sacs de plantation","🪴"],["engrais","Engrais","🌱"],
+
+  // Ajouts récents (tickets de caisse)
+  ["tomate_farcir","Tomate à farcir","🍅"],["legumes_couscous","Légumes couscous (conserve)","🥫"],["lotion_corps","Lotion corps 3-en-1","🧴"],
 ];
 
 
@@ -360,6 +363,9 @@ const BLOCK_SIZES = [
   ["foyer_entretien", 58],
   ["soin_sante", 57],
   ["artisanat_jardin", 12],
+  ["fruits_legumes", 1],
+  ["ingredients_epices", 1],
+  ["soin_sante", 1],
 ];
 
 
@@ -563,8 +569,17 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
   const [priceUnit, setPriceUnit] = useState(product?.priceUnit != null ? String(product.priceUnit).replace(".", ",") : "");
   const [priceKg, setPriceKg] = useState(product?.priceKg != null ? String(product.priceKg).replace(".", ",") : "");
+  const [variants, setVariants] = useState(product?.variants ?? []);
+  const [variantsOpen, setVariantsOpen] = useState(false);
   const c = catInfo(cat) || CATEGORIES[0];
   const isEdit = mode === "edit";
+
+  const addVariant = () => {
+    setVariants((v) => [...v, { id: `v-${Date.now()}`, name: "" }]);
+    setVariantsOpen(true);
+  };
+  const updateVariant = (id, name) => setVariants((v) => v.map((x) => (x.id === id ? { ...x, name } : x)));
+  const removeVariant = (id) => setVariants((v) => v.filter((x) => x.id !== id));
 
   return (
     <div
@@ -650,6 +665,44 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           </div>
         </div>
 
+        <div style={{ border: "1px solid #2A303A", borderRadius: 10, marginBottom: 22, overflow: "hidden" }}>
+          <button
+            onClick={() => setVariantsOpen((o) => !o)}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#14171C", border: "none", cursor: "pointer", color: "#F5F3EE" }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600 }}>
+              Sous-produits de cette famille{variants.length > 0 ? ` (${variants.length})` : ""}
+            </span>
+            <ChevronLeft size={15} color="#8B93A1" style={{ transform: `rotate(${variantsOpen ? 90 : -90}deg)`, transition: "transform 0.15s" }} />
+          </button>
+          {variantsOpen && (
+            <div style={{ padding: "12px 14px", background: "#1A1F27" }}>
+              <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 12px", lineHeight: 1.4 }}>
+                Utile pour reconnaître des variétés du même produit sur un ticket de caisse (ex : "Rouge", "Vert", "Jaune" pour un poivron).
+              </p>
+              {variants.map((v) => (
+                <div key={v.id} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                  <input
+                    value={v.name}
+                    onChange={(e) => updateVariant(v.id, e.target.value)}
+                    placeholder="ex : Vert"
+                    style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 8, color: "#F5F3EE", fontSize: 14, padding: "9px 10px", outline: "none", fontFamily: "inherit" }}
+                  />
+                  <button onClick={() => removeVariant(v.id)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#8B93A1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={addVariant}
+                style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, padding: "9px 12px", borderRadius: 8, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+              >
+                <Plus size={14} /> Ajouter un sous-produit
+              </button>
+            </div>
+          )}
+        </div>
+
         <div style={{ display: "flex", gap: 10 }}>
           {isEdit && onDelete && (
             <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
@@ -667,6 +720,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                 cat,
                 priceUnit: nUnit ? Number(nUnit) : null,
                 priceKg: nKg ? Number(nKg) : null,
+                variants: variants.map((v) => ({ id: v.id, name: v.name.trim() })).filter((v) => v.name),
               });
             }}
             style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#2A303A" : c.accent, color: !name.trim() ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
@@ -1107,8 +1161,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
-  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg }) => {
-    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null };
+  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
+    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null, variants: variants ?? [] };
     setCustomProducts((l) => [...l, p]);
     return p;
   };
@@ -1130,9 +1184,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const openNewProductModal = () => setProductModal({ mode: "create" });
   const openEditProductModal = (product) => setProductModal({ mode: "edit", product });
   const closeProductModal = () => setProductModal(null);
-  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg }) => {
-    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg });
-    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg });
+  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, variants });
+    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, variants });
     closeProductModal();
   };
   const deleteFromProductModal = () => {
