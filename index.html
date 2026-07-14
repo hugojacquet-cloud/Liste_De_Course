@@ -604,8 +604,9 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
       >
+        <div style={{ overflowY: "auto", padding: "20px 20px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <span style={{ width: 44, height: 44, borderRadius: 12, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>
             <IconGlyph icon={icon} size={24} />
@@ -756,7 +757,9 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           )}
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid #2A303A", flexShrink: 0, background: "#1E232B" }}>
           {isEdit && onDelete && (
             <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Supprimer
@@ -1114,6 +1117,7 @@ function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
 function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
+  const [catalogQuery, setCatalogQuery] = useState("");
   const [list, setList] = useState(() => initialData?.list ?? []);
   const [modalProduct, setModalProduct] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
@@ -1307,6 +1311,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     })),
     [products]
   );
+  const catalogFiltered = useMemo(() => {
+    const q = normalize(catalogQuery.trim());
+    if (!q) return [];
+    return products.filter((p) => productMatchesQuery(p, q)).slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
+  }, [catalogQuery, products]);
   const listedProductIds = useMemo(() => new Set(list.map((i) => i.productId)), [list]);
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
@@ -1509,7 +1518,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
         {tab === "tous" && (
           <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <button
                 onClick={openNewProductModal}
                 style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
@@ -1524,33 +1533,66 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
               />
             </div>
-            {allGrouped.map((cat) => {
-              const isCollapsed = !!collapsedCats[cat.key];
-              return (
-                <section key={cat.key} style={{ marginBottom: 26 }}>
-                  <div
-                    onClick={() => toggleCatCollapsed(cat.key)}
-                    style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
-                  >
-                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.products.length}</span>
-                    <ChevronLeft
-                      size={16}
-                      color="#5B6270"
-                      style={{ marginLeft: "auto", transform: isCollapsed ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}
-                    />
-                  </div>
-                  {!isCollapsed && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                      {cat.products.map((p) => (
-                        <ProductTile key={p.id} product={p} cat={cat} inList={listedProductIds.has(p.id)} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
-                      ))}
+
+            <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10, marginBottom: 20 }}>
+              <Search size={18} color="#6B7280" strokeWidth={2.2} />
+              <input
+                value={catalogQuery}
+                onChange={(e) => setCatalogQuery(e.target.value)}
+                placeholder="Filtrer un produit du catalogue…"
+                style={{ background: "transparent", border: "none", outline: "none", color: "#F5F3EE", fontSize: 15, width: "100%", fontFamily: "inherit" }}
+              />
+              {catalogQuery && (
+                <button onClick={() => setCatalogQuery("")} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {catalogQuery ? (
+              catalogFiltered.length === 0 ? (
+                <p style={{ color: "#5B6270", fontSize: 13.5, textAlign: "center", padding: "24px 0" }}>
+                  Aucun produit ne correspond à « {catalogQuery} »
+                </p>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                  {catalogFiltered.map((p) => {
+                    const cat = catInfo(p.cat);
+                    return (
+                      <ProductTile key={p.id} product={p} cat={cat} inList={listedProductIds.has(p.id)} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
+                    );
+                  })}
+                </div>
+              )
+            ) : (
+              allGrouped.map((cat) => {
+                const isCollapsed = !!collapsedCats[cat.key];
+                return (
+                  <section key={cat.key} style={{ marginBottom: 26 }}>
+                    <div
+                      onClick={() => toggleCatCollapsed(cat.key)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
+                    >
+                      <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
+                      <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
+                      <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.products.length}</span>
+                      <ChevronLeft
+                        size={16}
+                        color="#5B6270"
+                        style={{ marginLeft: "auto", transform: isCollapsed ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}
+                      />
                     </div>
-                  )}
-                </section>
-              );
-            })}
+                    {!isCollapsed && (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                        {cat.products.map((p) => (
+                          <ProductTile key={p.id} product={p} cat={cat} inList={listedProductIds.has(p.id)} onTap={() => openAddModal(p)} onLongPress={() => openEditProductModal(p)} />
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                );
+              })
+            )}
           </>
         )}
 
@@ -1709,7 +1751,7 @@ function setStoredHouseholdId(id) {
 
 // --- Écran de connexion -----------------------------------------------------
 
-function LoginScreen({ onLogin, loading, error, initialCode }) {
+function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode }) {
   const [email, setEmail] = useState("");
   const [pseudo, setPseudo] = useState("");
   const [code, setCode] = useState(initialCode || "");
@@ -1718,8 +1760,10 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
 
   const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
-  const submit = async () => {
-    const ok = await onLogin({ email, pseudo, code });
+
+  const submitExisting = async () => { await onLoginExisting({ email }); };
+  const submitNew = async () => {
+    const ok = await onLoginNew({ email, pseudo, code });
     if (ok) setSent(true);
   };
 
@@ -1730,7 +1774,7 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
           <div style={{ fontSize: 40, marginBottom: 14 }}>📬</div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: "0 0 10px" }}>Vérifie ta boîte mail</h1>
           <p style={{ color: "#8B93A1", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
-            On a envoyé un lien de connexion à <strong style={{ color: "#F5F3EE" }}>{email}</strong>. Ouvre-le pour accéder à l'app — pas besoin de mot de passe.
+            On a envoyé un lien de connexion à <strong style={{ color: "#F5F3EE" }}>{email}</strong>. Ouvre-le pour finaliser la création de ton compte — ensuite, une simple adresse email suffira pour te reconnecter.
           </p>
           <button
             onClick={() => setSent(false)}
@@ -1754,19 +1798,19 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
 
         <label style={labelStyle}>Email</label>
         <input style={inputStyle} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ton@email.com" />
+          onKeyDown={(e) => { if (e.key === "Enter") submitExisting(); }} placeholder="ton@email.com" />
 
         {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
 
         <button
           disabled={loading || !email}
-          onClick={submit}
+          onClick={submitExisting}
           style={{ width: "100%", padding: "15px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#2A303A" : "#6B9B5E", color: loading || !email ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 16, cursor: loading || !email ? "default" : "pointer" }}
         >
-          {loading ? "Envoi…" : "Connexion"}
+          {loading ? "Connexion…" : "Connexion"}
         </button>
         <p style={{ color: "#4B5563", fontSize: 11.5, textAlign: "center", margin: "10px 0 0", lineHeight: 1.4 }}>
-          Un lien de connexion t'est envoyé par email — pas de mot de passe à retenir.
+          Déjà un compte ? Ton email suffit, aucun email de vérification n'est renvoyé.
         </p>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0 18px" }}>
@@ -1786,15 +1830,15 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
           <>
             <label style={labelStyle}>Mon pseudo est</label>
             <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ex : Marie" />
+              onKeyDown={(e) => { if (e.key === "Enter") submitNew(); }} placeholder="ex : Marie" />
 
             <label style={labelStyle}>Code foyer (facultatif)</label>
             <input style={inputStyle} type="text" value={code} onChange={(e) => setCode(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
+              onKeyDown={(e) => { if (e.key === "Enter") submitNew(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
 
             <button
               disabled={loading || !email}
-              onClick={submit}
+              onClick={submitNew}
               style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: loading || !email ? "#5B6270" : "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: loading || !email ? "default" : "pointer" }}
             >
               {loading ? "Envoi…" : "Recevoir mon lien de connexion"}
@@ -2103,6 +2147,9 @@ function Root() {
         try { pending = localStorage.getItem("courses_pending_pseudo"); } catch (e) {}
         finalPseudo = pending || session.user.email.split("@")[0];
         await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: finalPseudo, updated_at: new Date().toISOString() });
+        // Première connexion (compte tout juste créé via le lien magique) : on fixe le mot de
+        // passe interne générique, pour que les connexions suivantes n'aient plus besoin d'email.
+        await sb.auth.updateUser({ password: GENERIC_PASSWORD });
       }
       try { localStorage.removeItem("courses_pending_pseudo"); } catch (e) {}
       setPseudo(finalPseudo);
@@ -2160,7 +2207,9 @@ function Root() {
     return () => { sb.removeChannel(channel); };
   }, [session?.user?.id, currentHouseholdId]);
 
-  const handleLogin = async ({ email, pseudo: typedPseudo, code }) => {
+  const GENERIC_PASSWORD = "123456"; // mot de passe interne unique à tous les comptes — évite de renvoyer un email à chaque connexion
+
+  const handleLoginNew = async ({ email, pseudo: typedPseudo, code }) => {
     setLoginLoading(true);
     setLoginError("");
     // Le pseudo et le code foyer sont tapés maintenant, mais ne serviront qu'après que
@@ -2177,6 +2226,18 @@ function Root() {
     setLoginLoading(false);
     if (error) {
       setLoginError(error.message || "Impossible d'envoyer le lien de connexion.");
+      return false;
+    }
+    return true;
+  };
+
+  const handleLoginExisting = async ({ email }) => {
+    setLoginLoading(true);
+    setLoginError("");
+    const { error } = await sb.auth.signInWithPassword({ email, password: GENERIC_PASSWORD });
+    setLoginLoading(false);
+    if (error) {
+      setLoginError("Compte introuvable. Si c'est ta première connexion, utilise \"Nouvel utilisateur ?\" ci-dessous.");
       return false;
     }
     return true;
@@ -2296,7 +2357,7 @@ function Root() {
     return <div style={{ background: "#14171C", minHeight: "100vh" }} />;
   }
   if (session === null) {
-    return <LoginScreen onLogin={handleLogin} loading={loginLoading} error={loginError} initialCode={pendingJoinCode} />;
+    return <LoginScreen onLoginExisting={handleLoginExisting} onLoginNew={handleLoginNew} loading={loginLoading} error={loginError} initialCode={pendingJoinCode} />;
   }
   if (!householdsReady) {
     return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
@@ -2318,10 +2379,12 @@ function Root() {
           ⚠️ Hors-ligne — tes changements sont gardés sur cet appareil et seront envoyés dès que la connexion revient
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
         <button onClick={() => setShowOptions(true)} title="Options" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🛠️</button>
-        <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
-        <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
+          <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
+        </div>
       </div>
 
       <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} />
