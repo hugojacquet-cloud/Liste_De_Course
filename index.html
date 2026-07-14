@@ -1218,7 +1218,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return CATEGORIES.filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
   }, [list, products]);
 
-  const allGrouped = useMemo(() => CATEGORIES.map((c) => ({ ...c, products: products.filter((p) => p.cat === c.key) })), [products]);
+  const allGrouped = useMemo(
+    () => CATEGORIES.map((c) => ({
+      ...c,
+      products: products.filter((p) => p.cat === c.key).slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" })),
+    })),
+    [products]
+  );
   const listedProductIds = useMemo(() => new Set(list.map((i) => i.productId)), [list]);
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
