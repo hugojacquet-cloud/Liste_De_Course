@@ -1714,6 +1714,7 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
   const [pseudo, setPseudo] = useState("");
   const [code, setCode] = useState(initialCode || "");
   const [sent, setSent] = useState(false);
+  const [newUserMode, setNewUserMode] = useState(!!initialCode); // ouvert d'office si on arrive via un lien d'invitation
 
   const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
@@ -1755,26 +1756,51 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
         <input style={inputStyle} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ton@email.com" />
 
-        <label style={labelStyle}>Mon pseudo est</label>
-        <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ex : Marie" />
-
-        <label style={labelStyle}>Code foyer (facultatif)</label>
-        <input style={inputStyle} type="text" value={code} onChange={(e) => setCode(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
-
         {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
 
         <button
           disabled={loading || !email}
           onClick={submit}
-          style={{ width: "100%", padding: "14px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#2A303A" : "#6B9B5E", color: loading || !email ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 15, cursor: loading || !email ? "default" : "pointer" }}
+          style={{ width: "100%", padding: "15px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#2A303A" : "#6B9B5E", color: loading || !email ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 16, cursor: loading || !email ? "default" : "pointer" }}
         >
-          {loading ? "Envoi…" : "Recevoir le lien de connexion"}
+          {loading ? "Envoi…" : "Connexion"}
         </button>
-        <p style={{ color: "#4B5563", fontSize: 12, textAlign: "center", marginTop: 16, lineHeight: 1.5 }}>
-          Aucun mot de passe. Un lien de connexion t'est envoyé par email — pas besoin de compte créé à l'avance.
+        <p style={{ color: "#4B5563", fontSize: 11.5, textAlign: "center", margin: "10px 0 0", lineHeight: 1.4 }}>
+          Un lien de connexion t'est envoyé par email — pas de mot de passe à retenir.
         </p>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0 18px" }}>
+          <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+          <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600, whiteSpace: "nowrap" }}>Nouvel utilisateur ?</span>
+          <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+        </div>
+
+        {!newUserMode ? (
+          <button
+            onClick={() => setNewUserMode(true)}
+            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+          >
+            Recevoir un lien de connexion
+          </button>
+        ) : (
+          <>
+            <label style={labelStyle}>Mon pseudo est</label>
+            <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ex : Marie" />
+
+            <label style={labelStyle}>Code foyer (facultatif)</label>
+            <input style={inputStyle} type="text" value={code} onChange={(e) => setCode(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
+
+            <button
+              disabled={loading || !email}
+              onClick={submit}
+              style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: loading || !email ? "#5B6270" : "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: loading || !email ? "default" : "pointer" }}
+            >
+              {loading ? "Envoi…" : "Recevoir mon lien de connexion"}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
