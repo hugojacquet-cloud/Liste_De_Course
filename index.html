@@ -578,7 +578,7 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
 
 // --- Création / édition d'un article (onglet "Tous les produits") ----------
 
-function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete, customIcons, onAddCustomIcon }) {
+function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete, customIcons, onAddCustomIcon, onDeleteCustomIcon }) {
   const iconImportRef = useRef(null);
   const [name, setName] = useState(product?.name ?? "");
   const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
@@ -661,7 +661,25 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           />
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6, margin: "8px 0 22px", maxHeight: 180, overflowY: "auto", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, padding: 8 }}>
-          {[...customIcons, ...ALL_ICONS].map((ic, i) => (
+          {customIcons.map((ic, i) => (
+            <div key={"custom-" + i} style={{ position: "relative" }}>
+              <button onClick={() => setIcon(ic)} style={{ width: "100%", fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <IconGlyph icon={ic} size={18} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteCustomIcon(ic);
+                  if (icon === ic) setIcon(ALL_ICONS[0]);
+                }}
+                title="Supprimer cette icône"
+                style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "#C4574A", border: "1px solid #14171C", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+              >
+                <X size={9} strokeWidth={3} />
+              </button>
+            </div>
+          ))}
+          {ALL_ICONS.map((ic, i) => (
             <button key={ic + i} onClick={() => setIcon(ic)} style={{ fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <IconGlyph icon={ic} size={18} />
             </button>
@@ -1246,6 +1264,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     reader.readAsDataURL(file);
   };
 
+  const deleteCustomIcon = (dataUrl) => setCustomIcons((list) => list.filter((i) => i !== dataUrl));
+
   const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
     if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, variants });
     else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, variants });
@@ -1580,6 +1600,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           onDelete={productModal.mode === "edit" ? deleteFromProductModal : null}
           customIcons={customIcons}
           onAddCustomIcon={addCustomIcon}
+          onDeleteCustomIcon={deleteCustomIcon}
         />
       )}
 
