@@ -1711,13 +1711,36 @@ function setStoredHouseholdId(id) {
 
 function LoginScreen({ onLogin, loading, error, initialCode }) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [pseudo, setPseudo] = useState("");
   const [code, setCode] = useState(initialCode || "");
+  const [sent, setSent] = useState(false);
 
   const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
-  const submit = () => onLogin({ email, password, pseudo, code });
+  const submit = async () => {
+    const ok = await onLogin({ email, pseudo, code });
+    if (ok) setSent(true);
+  };
+
+  if (sent) {
+    return (
+      <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 14 }}>📬</div>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: "0 0 10px" }}>Vérifie ta boîte mail</h1>
+          <p style={{ color: "#8B93A1", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
+            On a envoyé un lien de connexion à <strong style={{ color: "#F5F3EE" }}>{email}</strong>. Ouvre-le pour accéder à l'app — pas besoin de mot de passe.
+          </p>
+          <button
+            onClick={() => setSent(false)}
+            style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+          >
+            Mauvaise adresse ? Recommencer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
@@ -1729,11 +1752,8 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
         </div>
 
         <label style={labelStyle}>Email</label>
-        <input style={inputStyle} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ton@email.com" />
-
-        <label style={labelStyle}>Mot de passe</label>
-        <input style={inputStyle} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="••••••••" />
+        <input style={inputStyle} type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="ton@email.com" />
 
         <label style={labelStyle}>Mon pseudo est</label>
         <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
@@ -1746,14 +1766,14 @@ function LoginScreen({ onLogin, loading, error, initialCode }) {
         {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
 
         <button
-          disabled={loading || !email || !password}
+          disabled={loading || !email}
           onClick={submit}
-          style={{ width: "100%", padding: "14px 18px", borderRadius: 12, border: "none", background: loading || !email || !password ? "#2A303A" : "#6B9B5E", color: loading || !email || !password ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 15, cursor: loading || !email || !password ? "default" : "pointer" }}
+          style={{ width: "100%", padding: "14px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#2A303A" : "#6B9B5E", color: loading || !email ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 15, cursor: loading || !email ? "default" : "pointer" }}
         >
-          {loading ? "Connexion…" : "Se connecter"}
+          {loading ? "Envoi…" : "Recevoir le lien de connexion"}
         </button>
         <p style={{ color: "#4B5563", fontSize: 12, textAlign: "center", marginTop: 16, lineHeight: 1.5 }}>
-          Ton compte doit avoir été créé au préalable par l'administrateur du foyer.
+          Aucun mot de passe. Un lien de connexion t'est envoyé par email — pas besoin de compte créé à l'avance.
         </p>
       </div>
     </div>
@@ -1796,9 +1816,8 @@ function HouseholdScreen({ onCreate, onJoin, error }) {
 
 // --- Modale "Mon compte" -----------------------------------------------------
 
-function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, onLogout }) {
+function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
   const [pseudoInput, setPseudoInput] = useState(pseudo || "");
-  const [newPassword, setNewPassword] = useState("");
   const [status, setStatus] = useState("");
 
   const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit", marginTop: 8, marginBottom: 16, boxSizing: "border-box" };
@@ -1829,20 +1848,6 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onChangePassword, 
         </div>
 
         <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "0 0 18px" }} />
-
-        <label style={labelStyle}>Changer de mot de passe</label>
-        <input style={fieldStyle} type="password" autoComplete="new-password" placeholder="Nouveau mot de passe" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-        <button
-          onClick={async () => {
-            if (newPassword.length < 6) { setStatus("❌ 6 caractères minimum"); return; }
-            const ok = await onChangePassword(newPassword);
-            setStatus(ok ? "✓ Mot de passe mis à jour" : "❌ Erreur");
-            if (ok) setNewPassword("");
-          }}
-          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 8 }}
-        >
-          Mettre à jour le mot de passe
-        </button>
 
         {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") ? "#6B9B5E" : "#C4574A", margin: "4px 0 4px" }}>{status}</p>}
 
@@ -2034,11 +2039,15 @@ function Root() {
     (async () => {
       const uid = session.user.id;
       let joinedId = null;
-      if (pendingJoinCode) {
-        const ok = await joinHousehold(uid, pendingJoinCode);
-        if (ok) joinedId = pendingJoinCode;
+      let storedCode = null;
+      try { storedCode = localStorage.getItem("courses_pending_code"); } catch (e) {}
+      const codeToUse = pendingJoinCode || storedCode;
+      if (codeToUse) {
+        const ok = await joinHousehold(uid, codeToUse);
+        if (ok) joinedId = codeToUse;
         history.replaceState(null, "", location.pathname);
         setPendingJoinCode("");
+        try { localStorage.removeItem("courses_pending_code"); } catch (e) {}
       }
       const households = await loadMyHouseholds(uid);
       if (cancelled) return;
@@ -2062,7 +2071,15 @@ function Root() {
     if (!session) return;
     (async () => {
       const { data: profileRow } = await sb.from("courses_profiles").select("pseudo").eq("id", session.user.id).maybeSingle();
-      setPseudo(profileRow?.pseudo || session.user.email.split("@")[0]);
+      let finalPseudo = profileRow?.pseudo;
+      if (!finalPseudo) {
+        let pending = null;
+        try { pending = localStorage.getItem("courses_pending_pseudo"); } catch (e) {}
+        finalPseudo = pending || session.user.email.split("@")[0];
+        await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: finalPseudo, updated_at: new Date().toISOString() });
+      }
+      try { localStorage.removeItem("courses_pending_pseudo"); } catch (e) {}
+      setPseudo(finalPseudo);
     })();
   }, [session?.user?.id]);
 
@@ -2117,21 +2134,26 @@ function Root() {
     return () => { sb.removeChannel(channel); };
   }, [session?.user?.id, currentHouseholdId]);
 
-  const handleLogin = async ({ email, password, pseudo: typedPseudo, code }) => {
+  const handleLogin = async ({ email, pseudo: typedPseudo, code }) => {
     setLoginLoading(true);
     setLoginError("");
-    if (code && code.trim()) setPendingJoinCode(code.trim());
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      setLoginError(error.message || "Email ou mot de passe incorrect.");
-      setLoginLoading(false);
-      return;
-    }
-    const uid = data.user.id;
-    const { data: existing } = await sb.from("courses_profiles").select("pseudo").eq("id", uid).maybeSingle();
-    const finalPseudo = typedPseudo.trim() || existing?.pseudo || email.split("@")[0];
-    await sb.from("courses_profiles").upsert({ id: uid, pseudo: finalPseudo, updated_at: new Date().toISOString() });
+    // Le pseudo et le code foyer sont tapés maintenant, mais ne serviront qu'après que
+    // la personne ait cliqué le lien reçu par email (nouvelle page, nouvel état JS) —
+    // on les garde donc de côté le temps de cet aller-retour.
+    try {
+      if (typedPseudo && typedPseudo.trim()) localStorage.setItem("courses_pending_pseudo", typedPseudo.trim());
+      if (code && code.trim()) localStorage.setItem("courses_pending_code", code.trim());
+    } catch (e) {}
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+    });
     setLoginLoading(false);
+    if (error) {
+      setLoginError(error.message || "Impossible d'envoyer le lien de connexion.");
+      return false;
+    }
+    return true;
   };
 
   const handleCreateHousehold = async (name) => {
@@ -2194,11 +2216,6 @@ function Root() {
     if (!newPseudo || !session) return false;
     const { error } = await sb.from("courses_profiles").upsert({ id: session.user.id, pseudo: newPseudo, updated_at: new Date().toISOString() });
     if (!error) { setPseudo(newPseudo); refreshProfiles(currentHouseholdId); }
-    return !error;
-  };
-
-  const handleChangePassword = async (newPassword) => {
-    const { error } = await sb.auth.updateUser({ password: newPassword });
     return !error;
   };
 
@@ -2289,7 +2306,6 @@ function Root() {
           pseudo={pseudo}
           onClose={() => setShowAccount(false)}
           onSavePseudo={handleSavePseudo}
-          onChangePassword={handleChangePassword}
           onLogout={handleLogout}
         />
       )}
