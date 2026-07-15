@@ -1029,8 +1029,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
 
 // --- Carte recette (vue liste) -----------------------------------------------
 
-function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
-  const [added, setAdded] = useState(false);
+function RecipeCard({ recipe, onOpen, onOpenAddModal, onLongPress, products }) {
   const preview = recipe.ingredients.slice(0, 5);
   const total = estimateRecipeTotal(recipe.ingredients, products);
   const timer = useRef(null);
@@ -1087,15 +1086,15 @@ function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
       </div>
 
       <button
-        onClick={() => { onAddToList(recipe); setAdded(true); setTimeout(() => setAdded(false), 1400); }}
+        onClick={() => onOpenAddModal(recipe)}
         style={{
           marginTop: 14,
           width: "100%",
           padding: "11px 14px",
           borderRadius: 10,
           border: "none",
-          background: added ? "#6B9B5E" : "#2A303A",
-          color: added ? "#14171C" : "#F5F3EE",
+          background: "#2A303A",
+          color: "#F5F3EE",
           fontWeight: 700,
           fontSize: 13.5,
           cursor: "pointer",
@@ -1106,8 +1105,119 @@ function RecipeCard({ recipe, onOpen, onAddToList, onLongPress, products }) {
           transition: "background 0.15s",
         }}
       >
-        {added ? (<><Check size={15} /> Ajouté à la liste</>) : "Ajouter la recette à la liste"}
+        Ajouter la recette à la liste
       </button>
+    </div>
+  );
+}
+
+// --- Sélection des ingrédients à ajouter -----------------------------------
+
+function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, onAddAll }) {
+  const [selected, setSelected] = useState(() => new Set(recipe.ingredients.map((i) => i.ingId)));
+  const toggle = (ingId) => {
+    setSelected((s) => {
+      const next = new Set(s);
+      next.has(ingId) ? next.delete(ingId) : next.add(ingId);
+      return next;
+    });
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 60 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
+      >
+        <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ fontSize: 17, fontWeight: 700 }}>{recipe.name}</div>
+            <div style={{ fontSize: 12.5, color: "#8B93A1", marginTop: 2 }}>
+              {selected.size} / {recipe.ingredients.length} ingrédient{recipe.ingredients.length > 1 ? "s" : ""} sélectionné{selected.size > 1 ? "s" : ""}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: "auto", padding: "14px 20px 4px" }}>
+          {recipe.ingredients.map((item) => {
+            const p = products.find((pr) => pr.id === item.productId);
+            if (!p) return null;
+            const c = catInfo(p.cat);
+            const isSelected = selected.has(item.ingId);
+            return (
+              <button
+                key={item.ingId}
+                onClick={() => toggle(item.ingId)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "10px 10px",
+                  marginBottom: 6,
+                  borderRadius: 12,
+                  border: `1px solid ${isSelected ? c.accent : "#2A303A"}`,
+                  background: isSelected ? c.accent + "1A" : "transparent",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <IconGlyph icon={p.icon} size={16} />
+                </span>
+                <span style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#F5F3EE" }}>
+                    {p.name}{item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8B93A1" }}>{item.qty} {item.unit}</div>
+                </span>
+                <span
+                  style={{
+                    width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                    border: `1.5px solid ${isSelected ? c.accent : "#3A4150"}`,
+                    background: isSelected ? c.accent : "transparent",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {isSelected && <Check size={13} color="#14171C" strokeWidth={3} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ padding: "14px 20px", borderTop: "1px solid #2A303A", flexShrink: 0, background: "#1E232B" }}>
+          <button
+            disabled={selected.size === 0}
+            onClick={() => onConfirmSelection(recipe, [...selected])}
+            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "none", background: selected.size === 0 ? "#2A303A" : "#6B9B5E", color: selected.size === 0 ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: selected.size === 0 ? "default" : "pointer", marginBottom: 12 }}
+          >
+            Ajouter la sélection
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 12px" }}>
+            <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+            <span style={{ fontSize: 11, color: "#5B6270", fontWeight: 600 }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+          </div>
+
+          <button
+            onClick={() => onAddAll(recipe)}
+            style={{ width: "100%", padding: "12px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+          >
+            Tout ajouter
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1342,9 +1452,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setEditingListId(null);
   };
 
-  const addRecipeToList = (recipe) => {
+  const addRecipeToList = (recipe, ingIds) => {
     const now = Date.now();
-    const newEntries = recipe.ingredients.map((ing, i) => ({
+    const chosen = ingIds ? recipe.ingredients.filter((ing) => ingIds.includes(ing.ingId)) : recipe.ingredients;
+    const newEntries = chosen.map((ing, i) => ({
       listId: `${ing.productId}-${now}-${i}`,
       productId: ing.productId,
       qty: ing.qty,
@@ -1353,6 +1464,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     }));
     setList((l) => [...l, ...newEntries]);
   };
+
+  const [addRecipeModal, setAddRecipeModal] = useState(null); // recette en cours de sélection d'ingrédients
 
   const saveRecipe = (recipe) => {
     setRecipes((r) => {
@@ -1525,13 +1638,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               >
                 <Plus size={16} /> Nouvel article
               </button>
-              <input
-                ref={priceImportRef}
-                type="file"
-                accept="application/json"
-                style={{ display: "none" }}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
-              />
             </div>
 
             <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10, marginBottom: 20 }}>
@@ -1615,7 +1721,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 </div>
               ) : (
                 recipes.map((r) => (
-                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onAddToList={addRecipeToList} onLongPress={() => setConfirmDeleteRecipe(r)} products={products} />
+                  <RecipeCard key={r.id} recipe={r} onOpen={() => setRecipeEditing(r)} onOpenAddModal={(recipe) => setAddRecipeModal(recipe)} onLongPress={() => setConfirmDeleteRecipe(r)} products={products} />
                 ))
               )}
             </>
@@ -1643,6 +1749,16 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           customIcons={customIcons}
           onAddCustomIcon={addCustomIcon}
           onDeleteCustomIcon={deleteCustomIcon}
+        />
+      )}
+
+      {addRecipeModal && (
+        <AddRecipeToListModal
+          recipe={addRecipeModal}
+          products={products}
+          onClose={() => setAddRecipeModal(null)}
+          onConfirmSelection={(recipe, ingIds) => { addRecipeToList(recipe, ingIds); setAddRecipeModal(null); }}
+          onAddAll={(recipe) => { addRecipeToList(recipe); setAddRecipeModal(null); }}
         />
       )}
 
