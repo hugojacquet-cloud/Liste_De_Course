@@ -537,7 +537,7 @@ const stepperBtn = { width: 38, height: 38, borderRadius: 10, border: "1px solid
 
 // --- Carte produit (avec appui long pour édition) ---------------------------
 
-function ItemCard({ item, product, onEdit, onQuickTap, small }) {
+function ItemCard({ item, product, onEdit, onQuickTap, small, bought }) {
   const timer = useRef(null);
   const longPressed = useRef(false);
   const c = catInfo(product.cat);
@@ -559,10 +559,10 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
       onPointerCancel={clearPress}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: c.tint, border: `1px solid ${c.accent}33`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer" }}
+      style={{ background: bought ? "#1C1F26" : c.tint, border: `1px solid ${bought ? "#2A303A" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
     >
       <span style={{ fontSize: small ? 21 : 26 }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
-      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: "#F0EEE8" }}>
+      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: "#F0EEE8", textDecoration: bought ? "line-through" : "none" }}>
         {product.name}
         {item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
       </span>
@@ -1224,11 +1224,32 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
 
 // --- App -------------------------------------------------------------------
 
+// Garantit que chaque article a une clé de liste (migration douce des anciennes données
+// qui n'avaient qu'une seule liste implicite) et un statut "acheté" par défaut.
+function migrateLists(initialData) {
+  const lists = (initialData?.lists && initialData.lists.length > 0)
+    ? initialData.lists
+    : [{ id: "default", name: "Ma liste" }];
+  const defaultId = lists[0].id;
+  const list = (initialData?.list ?? []).map((it) => ({
+    bought: false,
+    ...it,
+    listKey: it.listKey || defaultId,
+  }));
+  return { lists, list };
+}
+
 function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
-  const [list, setList] = useState(() => initialData?.list ?? []);
+  const migrated = useMemo(() => migrateLists(initialData), []); // une seule fois à l'init
+  const [list, setList] = useState(() => migrated.list);
+  const [lists, setLists] = useState(() => migrated.lists); // { id, name }[] — listes partagées du foyer
+  const [activeListId, setActiveListId] = useState(() => migrated.lists[0].id); // choix local, pas synchronisé
+  const [listsModalOpen, setListsModalOpen] = useState(false);
+  const [lastDeleted, setLastDeleted] = useState(null); // { items: [...] } pour le bandeau "Annuler"
+  const lastDeletedTimer = useRef(null);
   const [modalProduct, setModalProduct] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
   const [recipes, setRecipes] = useState(() => initialData?.recipes ?? []);
@@ -1253,15 +1274,18 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const skipNextPush = useRef(false);
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
-    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons });
-  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons]);
+    if (onDataChange) onDataChange({ list, lists, recipes, customProducts, productOverrides, deletedProductIds, customIcons });
+  }, [list, lists, recipes, customProducts, productOverrides, deletedProductIds, customIcons]);
 
   // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
   useEffect(() => {
     if (!remoteData || remoteVersion === lastAppliedRemoteVersion.current) return;
     lastAppliedRemoteVersion.current = remoteVersion;
     skipNextPush.current = true;
-    setList(remoteData.list ?? []);
+    const remoteMigrated = migrateLists(remoteData);
+    setList(remoteMigrated.list);
+    setLists(remoteMigrated.lists);
+    setActiveListId((cur) => (remoteMigrated.lists.some((l) => l.id === cur) ? cur : remoteMigrated.lists[0].id));
     setRecipes(remoteData.recipes ?? []);
     setCustomProducts(remoteData.customProducts ?? []);
     setProductOverrides(remoteData.productOverrides ?? {});
@@ -1403,16 +1427,31 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     openAddModal(p);
   };
 
+  const activeList = useMemo(() => list.filter((it) => it.listKey === activeListId), [list, activeListId]);
+
   const grouped = useMemo(() => {
     const map = {};
-    list.forEach((item) => {
+    activeList.forEach((item) => {
+      if (item.bought) return;
       const p = products.find((pr) => pr.id === item.productId);
       if (!p) return;
       if (!map[p.cat]) map[p.cat] = [];
       map[p.cat].push({ item, product: p });
     });
     return CATEGORIES.filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
-  }, [list, products]);
+  }, [activeList, products]);
+
+  // Articles grisés ("déjà achetés"), regroupés au même endroit et triés alphabétiquement.
+  const boughtEntries = useMemo(() => {
+    const entries = [];
+    activeList.forEach((item) => {
+      if (!item.bought) return;
+      const p = products.find((pr) => pr.id === item.productId);
+      if (!p) return;
+      entries.push({ item, product: p });
+    });
+    return entries.sort((a, b) => a.product.name.localeCompare(b.product.name, "fr", { sensitivity: "base" }));
+  }, [activeList, products]);
 
   const allGrouped = useMemo(
     () => CATEGORIES.map((c) => ({
@@ -1426,7 +1465,21 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     if (!q) return [];
     return products.filter((p) => productMatchesQuery(p, q)).slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
   }, [catalogQuery, products]);
-  const listedProductIds = useMemo(() => new Set(list.map((i) => i.productId)), [list]);
+  const listedProductIds = useMemo(() => new Set(activeList.map((i) => i.productId)), [activeList]);
+
+  // --- Bandeau "Article supprimé — Annuler" ---------------------------------
+  const pushUndo = (items) => {
+    if (!items || items.length === 0) return;
+    if (lastDeletedTimer.current) clearTimeout(lastDeletedTimer.current);
+    setLastDeleted({ items });
+    lastDeletedTimer.current = setTimeout(() => setLastDeleted(null), 3500);
+  };
+  const undoDelete = () => {
+    if (!lastDeleted) return;
+    if (lastDeletedTimer.current) clearTimeout(lastDeletedTimer.current);
+    setList((l) => [...l, ...lastDeleted.items]);
+    setLastDeleted(null);
+  };
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
   const openEditModal = (listId) => {
@@ -1435,21 +1488,61 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setModalProduct(products.find((p) => p.id === entry.productId));
     setEditingListId(listId);
   };
-  const removeFromList = (listId) => setList((l) => l.filter((it) => it.listId !== listId));
+  // Tap court sur un article actif : on ne le supprime plus, on le grise et on le
+  // déplace dans "Déjà acheté". Tap sur un article déjà grisé : on le remet actif.
+  const toggleBought = (listId) => {
+    setList((l) => l.map((it) => (it.listId === listId ? { ...it, bought: !it.bought, boughtAt: !it.bought ? Date.now() : undefined } : it)));
+  };
+  // Suppression réelle (bouton "Retirer" de la fiche article) : passe par le bandeau d'annulation.
+  const removeFromList = (listId) => {
+    const entry = list.find((it) => it.listId === listId);
+    setList((l) => l.filter((it) => it.listId !== listId));
+    if (entry) pushUndo([entry]);
+  };
+  // Vide entièrement la section "Déjà acheté" de la liste active, avec possibilité d'annuler.
+  const clearBought = () => {
+    const removed = activeList.filter((it) => it.bought);
+    if (removed.length === 0) return;
+    const removedIds = new Set(removed.map((it) => it.listId));
+    setList((l) => l.filter((it) => !removedIds.has(it.listId)));
+    pushUndo(removed);
+  };
   const confirmModal = ({ qty, unit, note }) => {
     if (editingListId) {
       setList((l) => l.map((it) => (it.listId === editingListId ? { ...it, qty, unit, note } : it)));
     } else {
-      setList((l) => [...l, { listId: `${modalProduct.id}-${Date.now()}`, productId: modalProduct.id, qty, unit, note }]);
+      setList((l) => [...l, { listId: `${modalProduct.id}-${Date.now()}`, productId: modalProduct.id, qty, unit, note, listKey: activeListId, bought: false }]);
     }
     setModalProduct(null);
     setEditingListId(null);
     inputRef.current?.focus();
   };
   const deleteFromModal = () => {
+    const entry = list.find((it) => it.listId === editingListId);
     setList((l) => l.filter((it) => it.listId !== editingListId));
+    if (entry) pushUndo([entry]);
     setModalProduct(null);
     setEditingListId(null);
+  };
+
+  // --- Gestion des listes multiples (au sein du même foyer) -----------------
+  const createList = (name) => {
+    const trimmed = (name || "").trim();
+    if (!trimmed) return;
+    const id = `list-${Date.now()}`;
+    setLists((ls) => [...ls, { id, name: trimmed }]);
+    setActiveListId(id);
+  };
+  const renameList = (id, name) => {
+    const trimmed = (name || "").trim();
+    if (!trimmed) return;
+    setLists((ls) => ls.map((l) => (l.id === id ? { ...l, name: trimmed } : l)));
+  };
+  const deleteList = (id) => {
+    if (lists.length <= 1) return; // on garde toujours au moins une liste
+    setLists((ls) => ls.filter((l) => l.id !== id));
+    setList((l) => l.filter((it) => it.listKey !== id));
+    setActiveListId((cur) => (cur === id ? lists.find((l) => l.id !== id)?.id : cur));
   };
 
   const addRecipeToList = (recipe, ingIds) => {
@@ -1461,6 +1554,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       qty: ing.qty,
       unit: ing.unit,
       note: ing.note,
+      listKey: activeListId,
+      bought: false,
     }));
     setList((l) => [...l, ...newEntries]);
   };
@@ -1480,18 +1575,19 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setConfirmDeleteRecipe(null);
   };
 
-  const totalCount = list.length;
+  const totalCount = activeList.filter((it) => !it.bought).length;
 
   const estimatedTotal = useMemo(() => {
     let total = 0;
     let hasAny = false;
-    list.forEach((item) => {
+    activeList.forEach((item) => {
+      if (item.bought) return;
       const p = products.find((pr) => pr.id === item.productId);
       const est = estimateItemPrice(item, p);
       if (est != null) { total += est; hasAny = true; }
     });
     return hasAny ? total : null;
-  }, [list, products]);
+  }, [activeList, products]);
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", justifyContent: "center" }}>
@@ -1512,9 +1608,26 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               <ShoppingBasket size={16} strokeWidth={2.2} />
               {householdName || "Foyer"}
             </div>
-            <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
-              {tab === "liste" ? "Ma liste" : tab === "tous" ? "Tous les produits" : "Recettes"}
-            </h1>
+            {tab === "liste" ? (
+              <button
+                onClick={() => setListsModalOpen(true)}
+                style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 0, cursor: "pointer", color: "#F5F3EE" }}
+              >
+                <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
+                  {lists.find((l) => l.id === activeListId)?.name || "Ma liste"}
+                </h1>
+                <span style={{ fontSize: 15, color: "#6B7280", marginTop: 6 }}>▾</span>
+                {lists.length > 1 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6B9B5E", background: "#6B9B5E22", borderRadius: 999, padding: "2px 8px", marginTop: 4 }}>
+                    {lists.length} listes
+                  </span>
+                )}
+              </button>
+            ) : (
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
+                {tab === "tous" ? "Tous les produits" : "Recettes"}
+              </h1>
+            )}
             {tab === "liste" && (
               <p style={{ color: "#6B7280", fontSize: 14, margin: "4px 0 0" }}>
                 {totalCount === 0
@@ -1607,26 +1720,50 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         )}
 
         {tab === "liste" &&
-          (grouped.length === 0 ? (
+          (grouped.length === 0 && boughtEntries.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 16px", color: "#4B5563" }}>
               <div style={{ fontSize: 38, marginBottom: 10 }}>🧺</div>
               <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>Cherchez un produit ci-dessus pour<br />commencer votre liste.</p>
             </div>
           ) : (
-            grouped.map((cat) => (
-              <section key={cat.key} style={{ marginBottom: 26 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                  <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.entries.length}</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                  {cat.entries.map(({ item, product }) => (
-                    <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => removeFromList(item.listId)} />
-                  ))}
-                </div>
-              </section>
-            ))
+            <>
+              {grouped.map((cat) => (
+                <section key={cat.key} style={{ marginBottom: 26 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
+                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
+                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.entries.length}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                    {cat.entries.map(({ item, product }) => (
+                      <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+
+              {boughtEntries.length > 0 && (
+                <section style={{ marginBottom: 26 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#5B6270", flexShrink: 0 }} />
+                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>Déjà acheté</h2>
+                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{boughtEntries.length}</span>
+                    <button
+                      onClick={clearBought}
+                      title="Vider la liste des articles déjà achetés"
+                      style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "1px solid #C4574A55", color: "#C4574A", borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      <X size={12} /> Vider
+                    </button>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                    {boughtEntries.map(({ item, product }) => (
+                      <ItemCard key={item.listId} item={item} product={product} bought onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </>
           ))}
 
         {tab === "tous" && (
@@ -1828,6 +1965,132 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           </div>
         </div>
       )}
+
+      {listsModalOpen && (
+        <ListsModal
+          lists={lists}
+          activeListId={activeListId}
+          onClose={() => setListsModalOpen(false)}
+          onSwitch={(id) => { setActiveListId(id); setListsModalOpen(false); }}
+          onCreate={createList}
+          onRename={renameList}
+          onDelete={deleteList}
+        />
+      )}
+
+      {lastDeleted && (
+        <div
+          className="grow-in"
+          style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 90, width: "calc(100% - 36px)", maxWidth: 444, background: "#2A303A", border: "1px solid #3A4150", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, zIndex: 100, boxShadow: "0 12px 28px rgba(0,0,0,0.4)" }}
+        >
+          <span style={{ fontSize: 13.5, color: "#F5F3EE", flex: 1 }}>
+            {lastDeleted.items.length > 1 ? `${lastDeleted.items.length} articles supprimés` : "Article supprimé"}
+          </span>
+          <button
+            onClick={undoDelete}
+            style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Annuler
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Sélection / gestion des listes multiples du foyer -----------------------
+function ListsModal({ lists, activeListId, onClose, onSwitch, onCreate, onRename, onDelete }) {
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const startRename = (l) => { setRenamingId(l.id); setRenameValue(l.name); };
+  const confirmRename = () => {
+    onRename(renamingId, renameValue);
+    setRenamingId(null);
+  };
+  const confirmCreate = () => {
+    if (!newValue.trim()) return;
+    onCreate(newValue);
+    setNewValue("");
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "80vh", overflowY: "auto" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>Mes listes</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
+          {lists.map((l) => (
+            <div
+              key={l.id}
+              style={{ display: "flex", alignItems: "center", gap: 8, background: l.id === activeListId ? "#2A303A" : "transparent", border: `1px solid ${l.id === activeListId ? "#6B9B5E" : "#2A303A"}`, borderRadius: 12, padding: "10px 12px" }}
+            >
+              {renamingId === l.id ? (
+                <>
+                  <input
+                    autoFocus
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") setRenamingId(null); }}
+                    style={{ flex: 1, background: "#14171C", border: "1px solid #3A4150", borderRadius: 8, color: "#F5F3EE", fontSize: 14, padding: "7px 10px", outline: "none", fontFamily: "inherit" }}
+                  />
+                  <button onClick={confirmRename} style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>OK</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => onSwitch(l.id)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", color: "#F5F3EE", fontSize: 14.5, fontWeight: l.id === activeListId ? 700 : 500, cursor: "pointer", padding: "4px 0" }}>
+                    {l.id === activeListId ? "✓ " : ""}{l.name}
+                  </button>
+                  <button onClick={() => startRename(l)} title="Renommer" style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 4 }}>
+                    ✎
+                  </button>
+                  {lists.length > 1 && (
+                    confirmDeleteId === l.id ? (
+                      <button onClick={() => { onDelete(l.id); setConfirmDeleteId(null); }} style={{ background: "none", border: "none", color: "#C4574A", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        Confirmer ?
+                      </button>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteId(l.id)} title="Supprimer cette liste" style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 4 }}>
+                        <X size={14} />
+                      </button>
+                    )
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nouvelle liste</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <input
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") confirmCreate(); }}
+            placeholder="ex : Courses week-end, Bricolage…"
+            style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+          />
+          <button
+            onClick={confirmCreate}
+            style={{ padding: "11px 16px", borderRadius: 10, border: "none", background: "#6B9B5E", color: "#14171C", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
+          >
+            <Plus size={15} /> Créer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1840,12 +2103,13 @@ const SUPABASE_URL = "https://wpsubdmndqthdonousps.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3ViZG1uZHF0aGRvbm91c3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTU3MzUsImV4cCI6MjA5OTQzMTczNX0.sEtfKED9EwJoELfN8N3AkljfX9UmA-m8jbMAnXDzzO4";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const emptyData = { list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
+const emptyData = { list: [], lists: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
 
 function rowToData(row) {
   if (!row) return emptyData;
   return {
     list: row.list ?? [],
+    lists: row.lists ?? [],
     recipes: row.recipes ?? [],
     customProducts: row.custom_products ?? [],
     productOverrides: row.product_overrides ?? {},
@@ -2437,6 +2701,7 @@ function Root() {
     return sb.from("courses_data").upsert({
       household_id: householdId,
       list: data.list,
+      lists: data.lists,
       recipes: data.recipes,
       custom_products: data.customProducts,
       product_overrides: data.productOverrides,
