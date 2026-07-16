@@ -537,10 +537,11 @@ const stepperBtn = { width: 38, height: 38, borderRadius: 10, border: "1px solid
 
 // --- Carte produit (avec appui long pour édition) ---------------------------
 
-function ItemCard({ item, product, onEdit, onQuickTap, small, bought }) {
+function ItemCard({ item, product, onEdit, onQuickTap, small }) {
   const timer = useRef(null);
   const longPressed = useRef(false);
   const c = catInfo(product.cat);
+  const bought = !!item.bought;
   const startPress = () => {
     longPressed.current = false;
     timer.current = setTimeout(() => { longPressed.current = true; onEdit(); }, 480);
@@ -559,18 +560,18 @@ function ItemCard({ item, product, onEdit, onQuickTap, small, bought }) {
       onPointerCancel={clearPress}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: bought ? "#1C1F26" : c.tint, border: `1px solid ${bought ? "#2A303A" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
+      style={{ background: bought ? "#191D24" : c.tint, border: `1px solid ${bought ? "#2A303A" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
     >
-      <span style={{ fontSize: small ? 21 : 26 }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
-      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: "#F0EEE8", textDecoration: bought ? "line-through" : "none" }}>
+      <span style={{ fontSize: small ? 21 : 26, filter: bought ? "grayscale(1)" : "none" }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
+      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: bought ? "#8B93A1" : "#F0EEE8", textDecoration: bought ? "line-through" : "none" }}>
         {product.name}
-        {item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
+        {item.note && <span style={{ color: bought ? "#8B93A1" : c.accent }}> · {item.note}</span>}
       </span>
-      <span style={{ fontSize: 10.5, color: "#6B9B5E", fontWeight: 700 }}>{item.qty} {item.unit}</span>
+      <span style={{ fontSize: 10.5, color: bought ? "#5B6270" : "#6B9B5E", fontWeight: 700 }}>{item.qty} {item.unit}</span>
       {(() => {
         const est = estimateItemPrice(item, product);
         const priceText = est != null ? formatEuro(est) : formatProductPrice(product);
-        return priceText ? <span style={{ fontSize: 10.5, color: "#F5F3EE", fontWeight: 600 }}>{priceText}</span> : null;
+        return priceText ? <span style={{ fontSize: 10.5, color: bought ? "#5B6270" : "#F5F3EE", fontWeight: 600 }}>{priceText}</span> : null;
       })()}
     </div>
   );
@@ -1222,34 +1223,147 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
   );
 }
 
-// --- App -------------------------------------------------------------------
+// --- Sélecteur / gestion des listes (multi-listes au sein du foyer) --------
 
-// Garantit que chaque article a une clé de liste (migration douce des anciennes données
-// qui n'avaient qu'une seule liste implicite) et un statut "acheté" par défaut.
-function migrateLists(initialData) {
-  const lists = (initialData?.lists && initialData.lists.length > 0)
-    ? initialData.lists
-    : [{ id: "default", name: "Ma liste" }];
-  const defaultId = lists[0].id;
-  const list = (initialData?.list ?? []).map((it) => ({
-    bought: false,
-    ...it,
-    listKey: it.listKey || defaultId,
-  }));
-  return { lists, list };
+function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, onRename, onDelete, itemCounts }) {
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const startRename = (l) => { setRenamingId(l.id); setRenameValue(l.name); };
+  const saveRename = () => {
+    if (renamingId) onRename(renamingId, renameValue);
+    setRenamingId(null);
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
+      >
+        <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>Mes listes</div>
+          <button onClick={onClose} style={{ background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: "auto", padding: "14px 20px 20px" }}>
+          {lists.map((l) => (
+            <div
+              key={l.id}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", marginBottom: 8, borderRadius: 12,
+                border: `1px solid ${l.id === activeListId ? "#6B9B5E" : "#2A303A"}`,
+                background: l.id === activeListId ? "#6B9B5E1A" : "transparent",
+              }}
+            >
+              {renamingId === l.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenamingId(null); }}
+                  onBlur={saveRename}
+                  style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 8, color: "#F5F3EE", fontSize: 14.5, padding: "8px 10px", outline: "none", fontFamily: "inherit" }}
+                />
+              ) : (
+                <button onClick={() => onSelect(l.id)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: "#F5F3EE" }}>
+                    {l.id === activeListId && "✓ "}{l.name}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8B93A1", marginTop: 2 }}>
+                    {itemCounts[l.id] || 0} article{(itemCounts[l.id] || 0) > 1 ? "s" : ""} restant{(itemCounts[l.id] || 0) > 1 ? "s" : ""}
+                  </div>
+                </button>
+              )}
+              <button onClick={() => startRename(l)} title="Renommer" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#8B93A1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                ✏️
+              </button>
+              {lists.length > 1 && (
+                <button onClick={() => setConfirmDeleteId(l.id)} title="Supprimer cette liste" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+
+          {creating ? (
+            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && newName.trim()) { onCreate(newName); setNewName(""); setCreating(false); } }}
+                placeholder="ex : Apéro, BBQ…"
+                style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+              />
+              <button
+                disabled={!newName.trim()}
+                onClick={() => { onCreate(newName); setNewName(""); setCreating(false); }}
+                style={{ padding: "0 16px", borderRadius: 10, border: "none", background: newName.trim() ? "#6B9B5E" : "#2A303A", color: newName.trim() ? "#14171C" : "#5B6270", fontWeight: 700, fontSize: 14, cursor: newName.trim() ? "pointer" : "default" }}
+              >
+                OK
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setCreating(true)}
+              style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}
+            >
+              <Plus size={14} /> Nouvelle liste
+            </button>
+          )}
+        </div>
+      </div>
+
+      {confirmDeleteId && (
+        <div
+          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Supprimer cette liste ?</div>
+            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+              Tous ses articles seront supprimés définitivement. Cette action est irréversible.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button
+                onClick={() => { onDelete(confirmDeleteId); setConfirmDeleteId(null); }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
+
+// --- App -------------------------------------------------------------------
 
 function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
-  const migrated = useMemo(() => migrateLists(initialData), []); // une seule fois à l'init
-  const [list, setList] = useState(() => migrated.list);
-  const [lists, setLists] = useState(() => migrated.lists); // { id, name }[] — listes partagées du foyer
-  const [activeListId, setActiveListId] = useState(() => migrated.lists[0].id); // choix local, pas synchronisé
-  const [listsModalOpen, setListsModalOpen] = useState(false);
-  const [lastDeleted, setLastDeleted] = useState(null); // { items: [...] } pour le bandeau "Annuler"
-  const lastDeletedTimer = useRef(null);
+  const [lists, setLists] = useState(() => initialData?.lists ?? [{ id: "default", name: "Ma liste" }]);
+  const [activeListId, setActiveListId] = useState(() => initialData?.activeListId ?? (initialData?.lists?.[0]?.id ?? "default"));
+  const [showListSwitcher, setShowListSwitcher] = useState(false);
+  const [list, setList] = useState(() => initialData?.list ?? []);
+  const [confirmClearBought, setConfirmClearBought] = useState(false);
+  const [undoState, setUndoState] = useState(null); // { items: [...] } — articles supprimés récemment, restaurables
+  const undoTimer = useRef(null);
   const [modalProduct, setModalProduct] = useState(null);
   const [editingListId, setEditingListId] = useState(null);
   const [recipes, setRecipes] = useState(() => initialData?.recipes ?? []);
@@ -1274,23 +1388,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const skipNextPush = useRef(false);
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
-    if (onDataChange) onDataChange({ list, lists, recipes, customProducts, productOverrides, deletedProductIds, customIcons });
-  }, [list, lists, recipes, customProducts, productOverrides, deletedProductIds, customIcons]);
+    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId });
+  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId]);
 
   // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
   useEffect(() => {
     if (!remoteData || remoteVersion === lastAppliedRemoteVersion.current) return;
     lastAppliedRemoteVersion.current = remoteVersion;
     skipNextPush.current = true;
-    const remoteMigrated = migrateLists(remoteData);
-    setList(remoteMigrated.list);
-    setLists(remoteMigrated.lists);
-    setActiveListId((cur) => (remoteMigrated.lists.some((l) => l.id === cur) ? cur : remoteMigrated.lists[0].id));
+    setList(remoteData.list ?? []);
     setRecipes(remoteData.recipes ?? []);
     setCustomProducts(remoteData.customProducts ?? []);
     setProductOverrides(remoteData.productOverrides ?? {});
     setDeletedProductIds(remoteData.deletedProductIds ?? []);
     setCustomIcons(remoteData.customIcons ?? []);
+    setLists(remoteData.lists?.length ? remoteData.lists : [{ id: "default", name: "Ma liste" }]);
+    setActiveListId(remoteData.activeListId ?? remoteData.lists?.[0]?.id ?? "default");
   }, [remoteVersion]);
 
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
@@ -1427,11 +1540,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     openAddModal(p);
   };
 
-  const activeList = useMemo(() => list.filter((it) => it.listKey === activeListId), [list, activeListId]);
-
+  const visibleList = useMemo(
+    () => list.filter((it) => (it.group || lists[0]?.id) === activeListId),
+    [list, lists, activeListId]
+  );
   const grouped = useMemo(() => {
     const map = {};
-    activeList.forEach((item) => {
+    visibleList.forEach((item) => {
       if (item.bought) return;
       const p = products.find((pr) => pr.id === item.productId);
       if (!p) return;
@@ -1439,19 +1554,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       map[p.cat].push({ item, product: p });
     });
     return CATEGORIES.filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
-  }, [activeList, products]);
-
-  // Articles grisés ("déjà achetés"), regroupés au même endroit et triés alphabétiquement.
-  const boughtEntries = useMemo(() => {
-    const entries = [];
-    activeList.forEach((item) => {
-      if (!item.bought) return;
-      const p = products.find((pr) => pr.id === item.productId);
-      if (!p) return;
-      entries.push({ item, product: p });
-    });
-    return entries.sort((a, b) => a.product.name.localeCompare(b.product.name, "fr", { sensitivity: "base" }));
-  }, [activeList, products]);
+  }, [visibleList, products]);
+  const boughtItems = useMemo(() => {
+    return visibleList
+      .filter((item) => item.bought)
+      .map((item) => ({ item, product: products.find((pr) => pr.id === item.productId) }))
+      .filter((x) => x.product)
+      .sort((a, b) => a.product.name.localeCompare(b.product.name, "fr", { sensitivity: "base" }));
+  }, [visibleList, products]);
 
   const allGrouped = useMemo(
     () => CATEGORIES.map((c) => ({
@@ -1465,21 +1575,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     if (!q) return [];
     return products.filter((p) => productMatchesQuery(p, q)).slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" }));
   }, [catalogQuery, products]);
-  const listedProductIds = useMemo(() => new Set(activeList.map((i) => i.productId)), [activeList]);
-
-  // --- Bandeau "Article supprimé — Annuler" ---------------------------------
-  const pushUndo = (items) => {
-    if (!items || items.length === 0) return;
-    if (lastDeletedTimer.current) clearTimeout(lastDeletedTimer.current);
-    setLastDeleted({ items });
-    lastDeletedTimer.current = setTimeout(() => setLastDeleted(null), 3500);
-  };
-  const undoDelete = () => {
-    if (!lastDeleted) return;
-    if (lastDeletedTimer.current) clearTimeout(lastDeletedTimer.current);
-    setList((l) => [...l, ...lastDeleted.items]);
-    setLastDeleted(null);
-  };
+  const listedProductIds = useMemo(() => new Set(visibleList.map((i) => i.productId)), [visibleList]);
 
   const openAddModal = (product) => { setModalProduct(product); setEditingListId(null); setQuery(""); };
   const openEditModal = (listId) => {
@@ -1488,61 +1584,61 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setModalProduct(products.find((p) => p.id === entry.productId));
     setEditingListId(listId);
   };
-  // Tap court sur un article actif : on ne le supprime plus, on le grise et on le
-  // déplace dans "Déjà acheté". Tap sur un article déjà grisé : on le remet actif.
-  const toggleBought = (listId) => {
-    setList((l) => l.map((it) => (it.listId === listId ? { ...it, bought: !it.bought, boughtAt: !it.bought ? Date.now() : undefined } : it)));
+  const removeFromList = (listId) => setList((l) => l.filter((it) => it.listId !== listId));
+
+  // Annulation : garde une copie des articles supprimés pendant 4s, restaurable via le bandeau.
+  const showUndo = (items) => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoState({ items });
+    undoTimer.current = setTimeout(() => setUndoState(null), 4000);
   };
-  // Suppression réelle (bouton "Retirer" de la fiche article) : passe par le bandeau d'annulation.
-  const removeFromList = (listId) => {
-    const entry = list.find((it) => it.listId === listId);
-    setList((l) => l.filter((it) => it.listId !== listId));
-    if (entry) pushUndo([entry]);
+  const restoreUndo = () => {
+    if (!undoState) return;
+    setList((l) => [...l, ...undoState.items]);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoState(null);
   };
-  // Vide entièrement la section "Déjà acheté" de la liste active, avec possibilité d'annuler.
+
+  const toggleBought = (listId) => setList((l) => l.map((it) => (it.listId === listId ? { ...it, bought: !it.bought } : it)));
   const clearBought = () => {
-    const removed = activeList.filter((it) => it.bought);
-    if (removed.length === 0) return;
-    const removedIds = new Set(removed.map((it) => it.listId));
-    setList((l) => l.filter((it) => !removedIds.has(it.listId)));
-    pushUndo(removed);
+    const removed = list.filter((it) => it.bought && (it.group || lists[0]?.id) === activeListId);
+    setList((l) => l.filter((it) => !(it.bought && (it.group || lists[0]?.id) === activeListId)));
+    setConfirmClearBought(false);
+    if (removed.length) showUndo(removed);
   };
+
+  // Listes multiples
+  const createList = (name) => {
+    const id = `list-${Date.now()}`;
+    setLists((l) => [...l, { id, name: name.trim() || "Nouvelle liste" }]);
+    setActiveListId(id);
+  };
+  const renameList = (id, name) => setLists((l) => l.map((x) => (x.id === id ? { ...x, name: name.trim() || x.name } : x)));
+  const deleteList = (id) => {
+    if (lists.length <= 1) return; // toujours garder au moins une liste
+    setLists((l) => l.filter((x) => x.id !== id));
+    setList((l) => l.filter((it) => (it.group || lists[0]?.id) !== id)); // supprime aussi ses articles
+    if (activeListId === id) setActiveListId(lists.find((x) => x.id !== id)?.id);
+  };
+  const activeList = lists.find((l) => l.id === activeListId) || lists[0];
+
+
   const confirmModal = ({ qty, unit, note }) => {
     if (editingListId) {
       setList((l) => l.map((it) => (it.listId === editingListId ? { ...it, qty, unit, note } : it)));
     } else {
-      setList((l) => [...l, { listId: `${modalProduct.id}-${Date.now()}`, productId: modalProduct.id, qty, unit, note, listKey: activeListId, bought: false }]);
+      setList((l) => [...l, { listId: `${modalProduct.id}-${Date.now()}`, productId: modalProduct.id, qty, unit, note, group: activeListId }]);
     }
     setModalProduct(null);
     setEditingListId(null);
     inputRef.current?.focus();
   };
   const deleteFromModal = () => {
-    const entry = list.find((it) => it.listId === editingListId);
+    const removed = list.find((it) => it.listId === editingListId);
     setList((l) => l.filter((it) => it.listId !== editingListId));
-    if (entry) pushUndo([entry]);
     setModalProduct(null);
     setEditingListId(null);
-  };
-
-  // --- Gestion des listes multiples (au sein du même foyer) -----------------
-  const createList = (name) => {
-    const trimmed = (name || "").trim();
-    if (!trimmed) return;
-    const id = `list-${Date.now()}`;
-    setLists((ls) => [...ls, { id, name: trimmed }]);
-    setActiveListId(id);
-  };
-  const renameList = (id, name) => {
-    const trimmed = (name || "").trim();
-    if (!trimmed) return;
-    setLists((ls) => ls.map((l) => (l.id === id ? { ...l, name: trimmed } : l)));
-  };
-  const deleteList = (id) => {
-    if (lists.length <= 1) return; // on garde toujours au moins une liste
-    setLists((ls) => ls.filter((l) => l.id !== id));
-    setList((l) => l.filter((it) => it.listKey !== id));
-    setActiveListId((cur) => (cur === id ? lists.find((l) => l.id !== id)?.id : cur));
+    if (removed) showUndo([removed]);
   };
 
   const addRecipeToList = (recipe, ingIds) => {
@@ -1554,8 +1650,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       qty: ing.qty,
       unit: ing.unit,
       note: ing.note,
-      listKey: activeListId,
-      bought: false,
+      group: activeListId,
     }));
     setList((l) => [...l, ...newEntries]);
   };
@@ -1575,19 +1670,19 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setConfirmDeleteRecipe(null);
   };
 
-  const totalCount = activeList.filter((it) => !it.bought).length;
+  const remainingItems = useMemo(() => visibleList.filter((it) => !it.bought), [visibleList]);
+  const totalCount = remainingItems.length;
 
   const estimatedTotal = useMemo(() => {
     let total = 0;
     let hasAny = false;
-    activeList.forEach((item) => {
-      if (item.bought) return;
+    remainingItems.forEach((item) => {
       const p = products.find((pr) => pr.id === item.productId);
       const est = estimateItemPrice(item, p);
       if (est != null) { total += est; hasAny = true; }
     });
     return hasAny ? total : null;
-  }, [activeList, products]);
+  }, [remainingItems, products]);
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", justifyContent: "center" }}>
@@ -1608,26 +1703,20 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               <ShoppingBasket size={16} strokeWidth={2.2} />
               {householdName || "Foyer"}
             </div>
-            {tab === "liste" ? (
-              <button
-                onClick={() => setListsModalOpen(true)}
-                style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 0, cursor: "pointer", color: "#F5F3EE" }}
-              >
-                <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
-                  {lists.find((l) => l.id === activeListId)?.name || "Ma liste"}
-                </h1>
-                <span style={{ fontSize: 15, color: "#6B7280", marginTop: 6 }}>▾</span>
-                {lists.length > 1 && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6B9B5E", background: "#6B9B5E22", borderRadius: 999, padding: "2px 8px", marginTop: 4 }}>
-                    {lists.length} listes
-                  </span>
-                )}
-              </button>
-            ) : (
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
               <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
-                {tab === "tous" ? "Tous les produits" : "Recettes"}
+                {tab === "liste" ? (activeList?.name || "Ma liste") : tab === "tous" ? "Tous les produits" : "Recettes"}
               </h1>
-            )}
+              {tab === "liste" && (
+                <button
+                  onClick={() => setShowListSwitcher(true)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 999, padding: "7px 12px", color: "#F5F3EE", fontWeight: 600, fontSize: 12.5, cursor: "pointer", flexShrink: 0, marginTop: 4 }}
+                >
+                  <ListChecks size={13} /> Listes
+                  <ChevronLeft size={13} style={{ transform: "rotate(-90deg)" }} />
+                </button>
+              )}
+            </div>
             {tab === "liste" && (
               <p style={{ color: "#6B7280", fontSize: 14, margin: "4px 0 0" }}>
                 {totalCount === 0
@@ -1720,51 +1809,49 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         )}
 
         {tab === "liste" &&
-          (grouped.length === 0 && boughtEntries.length === 0 ? (
+          (grouped.length === 0 && boughtItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 16px", color: "#4B5563" }}>
               <div style={{ fontSize: 38, marginBottom: 10 }}>🧺</div>
               <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>Cherchez un produit ci-dessus pour<br />commencer votre liste.</p>
             </div>
           ) : (
-            <>
-              {grouped.map((cat) => (
-                <section key={cat.key} style={{ marginBottom: 26 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.entries.length}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                    {cat.entries.map(({ item, product }) => (
-                      <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
-                    ))}
-                  </div>
-                </section>
-              ))}
-
-              {boughtEntries.length > 0 && (
-                <section style={{ marginBottom: 26 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#5B6270", flexShrink: 0 }} />
-                    <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>Déjà acheté</h2>
-                    <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{boughtEntries.length}</span>
-                    <button
-                      onClick={clearBought}
-                      title="Vider la liste des articles déjà achetés"
-                      style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, background: "transparent", border: "1px solid #C4574A55", color: "#C4574A", borderRadius: 999, padding: "5px 10px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-                    >
-                      <X size={12} /> Vider
-                    </button>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
-                    {boughtEntries.map(({ item, product }) => (
-                      <ItemCard key={item.listId} item={item} product={product} bought onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
+            grouped.map((cat) => (
+              <section key={cat.key} style={{ marginBottom: 26 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
+                  <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.entries.length}</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                  {cat.entries.map(({ item, product }) => (
+                    <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
+                  ))}
+                </div>
+              </section>
+            ))
           ))}
+
+        {tab === "liste" && boughtItems.length > 0 && (
+          <section style={{ marginBottom: 26, marginTop: grouped.length === 0 ? 0 : 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#4B5563", flexShrink: 0 }} />
+              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#8B93A1" }}>Déjà acheté</h2>
+              <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{boughtItems.length}</span>
+              <button
+                onClick={() => setConfirmClearBought(true)}
+                title="Vider les articles déjà achetés"
+                style={{ marginLeft: "auto", width: 24, height: 24, borderRadius: "50%", border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0, flexShrink: 0 }}
+              >
+                <X size={13} strokeWidth={2.5} />
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {boughtItems.map(({ item, product }) => (
+                <ItemCard key={item.listId} item={item} product={product} onEdit={() => openEditModal(item.listId)} onQuickTap={() => toggleBought(item.listId)} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {tab === "tous" && (
           <>
@@ -1930,6 +2017,68 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         </div>
       )}
 
+      {confirmClearBought && (
+        <div
+          onClick={() => setConfirmClearBought(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Vider « Déjà acheté » ?</div>
+            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+              {boughtItems.length} article{boughtItems.length > 1 ? "s" : ""} grisé{boughtItems.length > 1 ? "s" : ""} {boughtItems.length > 1 ? "seront supprimés" : "sera supprimé"} de la liste. Tu pourras annuler juste après si besoin.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmClearBought(false)}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={clearBought}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+              >
+                Vider
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showListSwitcher && (
+        <ListSwitcherModal
+          lists={lists}
+          activeListId={activeListId}
+          onClose={() => setShowListSwitcher(false)}
+          onSelect={(id) => { setActiveListId(id); setShowListSwitcher(false); }}
+          onCreate={createList}
+          onRename={renameList}
+          onDelete={deleteList}
+          itemCounts={Object.fromEntries(lists.map((l) => [l.id, list.filter((it) => (it.group || lists[0]?.id) === l.id && !it.bought).length]))}
+        />
+      )}
+
+      {undoState && (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#242A33", border: "1px solid #3A4150", borderRadius: 14, padding: "12px 16px", boxShadow: "0 12px 28px rgba(0,0,0,0.4)", maxWidth: 440, width: "100%" }}>
+            <span style={{ fontSize: 13.5, color: "#F5F3EE", flex: 1 }}>
+              {undoState.items.length > 1 ? `${undoState.items.length} articles supprimés` : "Article supprimé"}
+            </span>
+            <button
+              onClick={restoreUndo}
+              style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
+
+
       {optionsOpen && (
         <div
           onClick={onCloseOptions}
@@ -1965,132 +2114,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           </div>
         </div>
       )}
-
-      {listsModalOpen && (
-        <ListsModal
-          lists={lists}
-          activeListId={activeListId}
-          onClose={() => setListsModalOpen(false)}
-          onSwitch={(id) => { setActiveListId(id); setListsModalOpen(false); }}
-          onCreate={createList}
-          onRename={renameList}
-          onDelete={deleteList}
-        />
-      )}
-
-      {lastDeleted && (
-        <div
-          className="grow-in"
-          style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 90, width: "calc(100% - 36px)", maxWidth: 444, background: "#2A303A", border: "1px solid #3A4150", borderRadius: 14, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, zIndex: 100, boxShadow: "0 12px 28px rgba(0,0,0,0.4)" }}
-        >
-          <span style={{ fontSize: 13.5, color: "#F5F3EE", flex: 1 }}>
-            {lastDeleted.items.length > 1 ? `${lastDeleted.items.length} articles supprimés` : "Article supprimé"}
-          </span>
-          <button
-            onClick={undoDelete}
-            style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            Annuler
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// --- Sélection / gestion des listes multiples du foyer -----------------------
-function ListsModal({ lists, activeListId, onClose, onSwitch, onCreate, onRename, onDelete }) {
-  const [renamingId, setRenamingId] = useState(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [newValue, setNewValue] = useState("");
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-
-  const startRename = (l) => { setRenamingId(l.id); setRenameValue(l.name); };
-  const confirmRename = () => {
-    onRename(renamingId, renameValue);
-    setRenamingId(null);
-  };
-  const confirmCreate = () => {
-    if (!newValue.trim()) return;
-    onCreate(newValue);
-    setNewValue("");
-  };
-
-  return (
-    <div
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", maxHeight: "80vh", overflowY: "auto" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-          <span style={{ fontSize: 17, fontWeight: 700 }}>Mes listes</span>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <X size={15} />
-          </button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 18 }}>
-          {lists.map((l) => (
-            <div
-              key={l.id}
-              style={{ display: "flex", alignItems: "center", gap: 8, background: l.id === activeListId ? "#2A303A" : "transparent", border: `1px solid ${l.id === activeListId ? "#6B9B5E" : "#2A303A"}`, borderRadius: 12, padding: "10px 12px" }}
-            >
-              {renamingId === l.id ? (
-                <>
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") confirmRename(); if (e.key === "Escape") setRenamingId(null); }}
-                    style={{ flex: 1, background: "#14171C", border: "1px solid #3A4150", borderRadius: 8, color: "#F5F3EE", fontSize: 14, padding: "7px 10px", outline: "none", fontFamily: "inherit" }}
-                  />
-                  <button onClick={confirmRename} style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>OK</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => onSwitch(l.id)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", color: "#F5F3EE", fontSize: 14.5, fontWeight: l.id === activeListId ? 700 : 500, cursor: "pointer", padding: "4px 0" }}>
-                    {l.id === activeListId ? "✓ " : ""}{l.name}
-                  </button>
-                  <button onClick={() => startRename(l)} title="Renommer" style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 4 }}>
-                    ✎
-                  </button>
-                  {lists.length > 1 && (
-                    confirmDeleteId === l.id ? (
-                      <button onClick={() => { onDelete(l.id); setConfirmDeleteId(null); }} style={{ background: "none", border: "none", color: "#C4574A", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
-                        Confirmer ?
-                      </button>
-                    ) : (
-                      <button onClick={() => setConfirmDeleteId(l.id)} title="Supprimer cette liste" style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 4 }}>
-                        <X size={14} />
-                      </button>
-                    )
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nouvelle liste</label>
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <input
-            value={newValue}
-            onChange={(e) => setNewValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") confirmCreate(); }}
-            placeholder="ex : Courses week-end, Bricolage…"
-            style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
-          />
-          <button
-            onClick={confirmCreate}
-            style={{ padding: "11px 16px", borderRadius: 10, border: "none", background: "#6B9B5E", color: "#14171C", fontWeight: 700, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}
-          >
-            <Plus size={15} /> Créer
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -2103,13 +2126,12 @@ const SUPABASE_URL = "https://wpsubdmndqthdonousps.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3ViZG1uZHF0aGRvbm91c3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTU3MzUsImV4cCI6MjA5OTQzMTczNX0.sEtfKED9EwJoELfN8N3AkljfX9UmA-m8jbMAnXDzzO4";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const emptyData = { list: [], lists: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
+const emptyData = { list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [] };
 
 function rowToData(row) {
   if (!row) return emptyData;
   return {
     list: row.list ?? [],
-    lists: row.lists ?? [],
     recipes: row.recipes ?? [],
     customProducts: row.custom_products ?? [],
     productOverrides: row.product_overrides ?? {},
@@ -2701,7 +2723,6 @@ function Root() {
     return sb.from("courses_data").upsert({
       household_id: householdId,
       list: data.list,
-      lists: data.lists,
       recipes: data.recipes,
       custom_products: data.customProducts,
       product_overrides: data.productOverrides,
