@@ -7,15 +7,15 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#14171C">
+<meta name="theme-color" content="#FBF7EA">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Courses">
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: #14171C; }
+  html, body { margin: 0; padding: 0; background: #FBF7EA; }
   #root { min-height: 100vh; }
-  #boot-error { display:none; color:#F5F3EE; font-family:-apple-system,sans-serif; padding:24px; max-width:480px; margin:0 auto; }
+  #boot-error { display:none; color:#23262E; font-family:-apple-system,sans-serif; padding:24px; max-width:480px; margin:0 auto; }
 </style>
 <script>
 if ('serviceWorker' in navigator) {
@@ -118,19 +118,19 @@ const BookOpen = (p) => (
 // --- Catégories ----------------------------------------------------------
 
 const CATEGORIES = [
-  { key: "fruits_legumes", label: "Fruits & Légumes", accent: "#6B9B5E", tint: "#1F2A1E" },
-  { key: "pain_patisserie", label: "Pain & Pâtisserie", accent: "#C99B5C", tint: "#2A2419" },
-  { key: "produits_laitiers", label: "Produits laitiers", accent: "#D9A63C", tint: "#2B2619" },
-  { key: "viande_poisson", label: "Viande & Poisson", accent: "#C4574A", tint: "#2B2120" },
-  { key: "ingredients_epices", label: "Ingrédients & Épices", accent: "#B8642E", tint: "#2A2119" },
-  { key: "surgeles_plats", label: "Surgelés & Plats cuisinés", accent: "#6E7EBE", tint: "#20222B" },
-  { key: "pates_riz_cereales", label: "Pâtes, Riz & Céréales", accent: "#B5934A", tint: "#292419" },
-  { key: "snacks_friandises", label: "Snacks & Friandises", accent: "#B85C7A", tint: "#2A2024" },
-  { key: "boissons", label: "Boissons", accent: "#4C8CA8", tint: "#1E272B" },
-  { key: "foyer_entretien", label: "Foyer & Entretien", accent: "#8B7BA8", tint: "#252129" },
-  { key: "soin_sante", label: "Soin & Santé", accent: "#5FA88C", tint: "#1E2A25" },
-  { key: "artisanat_jardin", label: "Artisanat & Jardin", accent: "#7C8C4A", tint: "#24291C" },
-  { key: "autre", label: "Autre", accent: "#8B93A1", tint: "#23262C" },
+  { key: "fruits_legumes", label: "Fruits & Légumes", accent: "#4E9D5B", tint: "#E8F3E1" },
+  { key: "pain_patisserie", label: "Pain & Pâtisserie", accent: "#C98A3D", tint: "#FBEFDC" },
+  { key: "produits_laitiers", label: "Produits laitiers", accent: "#D9A62E", tint: "#FCF3D9" },
+  { key: "viande_poisson", label: "Viande & Poisson", accent: "#D9614F", tint: "#FBE5E1" },
+  { key: "ingredients_epices", label: "Ingrédients & Épices", accent: "#B8642E", tint: "#F6E6D8" },
+  { key: "surgeles_plats", label: "Surgelés & Plats cuisinés", accent: "#5D7BC4", tint: "#E4E9F8" },
+  { key: "pates_riz_cereales", label: "Pâtes, Riz & Céréales", accent: "#B08A3E", tint: "#F5EEDA" },
+  { key: "snacks_friandises", label: "Snacks & Friandises", accent: "#D45E85", tint: "#FBE3EC" },
+  { key: "boissons", label: "Boissons", accent: "#3E93B0", tint: "#DDF0F5" },
+  { key: "foyer_entretien", label: "Foyer & Entretien", accent: "#8B72C4", tint: "#EBE4FA" },
+  { key: "soin_sante", label: "Soin & Santé", accent: "#3FA184", tint: "#DFF3EC" },
+  { key: "artisanat_jardin", label: "Artisanat & Jardin", accent: "#7C9142", tint: "#EAF0D9" },
+  { key: "autre", label: "Autre", accent: "#9A9A88", tint: "#F0EEE4" },
 ];
 const catInfo = (key) => CATEGORIES.find((c) => c.key === key);
 
@@ -471,7 +471,7 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", animation: "slideUp 0.22s ease-out" }}
+        style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", animation: "slideUp 0.22s ease-out" }}
       >
         <style>{`@keyframes slideUp { from { transform: translateY(24px); opacity:0.4 } to { transform: translateY(0); opacity:1 } }`}</style>
 
@@ -483,17 +483,17 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
             <div style={{ fontSize: 17, fontWeight: 700 }}>{product.name}</div>
             <div style={{ fontSize: 12.5, color: c.accent, fontWeight: 600 }}>{c.label}</div>
           </div>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Quantité</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Quantité</label>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 18px" }}>
           <button onClick={() => setQty((q) => Math.max(0, +(q - (unit === "kg" || unit === "L" ? 0.5 : 1)).toFixed(2)))} style={stepperBtn}>
             <Minus size={16} />
           </button>
-          <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} style={{ flex: 1, textAlign: "center", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 16, fontWeight: 600, padding: "10px 6px", outline: "none" }} />
+          <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} style={{ flex: 1, textAlign: "center", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 16, fontWeight: 600, padding: "10px 6px", outline: "none" }} />
           <button onClick={() => setQty((q) => +(q + (unit === "kg" || unit === "L" ? 0.5 : 1)).toFixed(2))} style={stepperBtn}>
             <Plus size={16} />
           </button>
@@ -501,18 +501,18 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
           {UNITS.map((u) => (
-            <button key={u} onClick={() => setUnit(u)} style={{ padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1px solid ${unit === u ? c.accent : "#2A303A"}`, background: unit === u ? c.accent + "26" : "transparent", color: unit === u ? c.accent : "#9CA3AF", cursor: "pointer" }}>
+            <button key={u} onClick={() => setUnit(u)} style={{ padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1px solid ${unit === u ? c.accent : "#ECE4D0"}`, background: unit === u ? c.accent + "26" : "transparent", color: unit === u ? c.accent : "#7A7968", cursor: "pointer" }}>
               {u}
             </button>
           ))}
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Note (précision)</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Note (précision)</label>
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="ex : cube, semoule, roux…"
-          style={{ width: "100%", marginTop: 8, marginBottom: 22, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+          style={{ width: "100%", marginTop: 8, marginBottom: 22, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
         />
 
         <div style={{ display: "flex", gap: 10 }}>
@@ -523,7 +523,7 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
           )}
           <button
             onClick={() => onConfirm({ qty, unit, note: note.trim() })}
-            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: c.accent, color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: c.accent, color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
           >
             {confirmLabel || (isEdit ? "Enregistrer" : "Ajouter")}
           </button>
@@ -533,7 +533,7 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
   );
 }
 
-const stepperBtn = { width: 38, height: 38, borderRadius: 10, border: "1px solid #2A303A", background: "#14171C", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 };
+const stepperBtn = { width: 38, height: 38, borderRadius: 10, border: "1px solid #ECE4D0", background: "#FBF7EA", color: "#23262E", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 };
 
 // --- Carte produit (avec appui long pour édition) ---------------------------
 
@@ -560,18 +560,18 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
       onPointerCancel={clearPress}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: bought ? "#191D24" : c.tint, border: `1px solid ${bought ? "#2A303A" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
+      style={{ background: bought ? "#EFEDE2" : c.tint, border: `1px solid ${bought ? "#ECE4D0" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
     >
       <span style={{ fontSize: small ? 21 : 26, filter: bought ? "grayscale(1)" : "none" }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
-      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: bought ? "#8B93A1" : "#F0EEE8", textDecoration: bought ? "line-through" : "none" }}>
+      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: bought ? "#9A9887" : "#23262E", textDecoration: bought ? "line-through" : "none" }}>
         {product.name}
-        {item.note && <span style={{ color: bought ? "#8B93A1" : c.accent }}> · {item.note}</span>}
+        {item.note && <span style={{ color: bought ? "#9A9887" : c.accent }}> · {item.note}</span>}
       </span>
-      <span style={{ fontSize: 10.5, color: bought ? "#5B6270" : "#6B9B5E", fontWeight: 700 }}>{item.qty} {item.unit}</span>
+      <span style={{ fontSize: 10.5, color: bought ? "#A8A695" : "#4E9D5B", fontWeight: 700 }}>{item.qty} {item.unit}</span>
       {(() => {
         const est = estimateItemPrice(item, product);
         const priceText = est != null ? formatEuro(est) : formatProductPrice(product);
-        return priceText ? <span style={{ fontSize: 10.5, color: bought ? "#5B6270" : "#F5F3EE", fontWeight: 600 }}>{priceText}</span> : null;
+        return priceText ? <span style={{ fontSize: 10.5, color: bought ? "#A8A695" : "#23262E", fontWeight: 600 }}>{priceText}</span> : null;
       })()}
     </div>
   );
@@ -605,7 +605,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0" }}
       >
         <div style={{ overflowY: "auto", padding: "20px 20px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
@@ -613,40 +613,40 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
             <IconGlyph icon={icon} size={24} />
           </span>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{isEdit ? "Modifier l'article" : "Nouvel article"}</div>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="ex : Sauce chimichurri"
-          style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+          style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
         />
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Rayon</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Rayon</label>
         <div style={{ position: "relative", margin: "8px 0 20px" }}>
           <select
             value={cat}
             onChange={(e) => setCat(e.target.value)}
-            style={{ width: "100%", appearance: "none", background: "#14171C", border: `1px solid ${c.accent}55`, borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, fontWeight: 600, padding: "12px 36px 12px 12px", outline: "none", fontFamily: "inherit", cursor: "pointer" }}
+            style={{ width: "100%", appearance: "none", background: "#FBF7EA", border: `1px solid ${c.accent}55`, borderRadius: 10, color: "#23262E", fontSize: 14.5, fontWeight: 600, padding: "12px 36px 12px 12px", outline: "none", fontFamily: "inherit", cursor: "pointer" }}
           >
             {CATEGORIES.map((cc) => (
-              <option key={cc.key} value={cc.key} style={{ background: "#1E232B", color: "#F5F3EE" }}>
+              <option key={cc.key} value={cc.key} style={{ background: "#FFFFFF", color: "#23262E" }}>
                 {cc.label}
               </option>
             ))}
           </select>
-          <ChevronLeft size={16} color="#8B93A1" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(-90deg)", pointerEvents: "none" }} />
+          <ChevronLeft size={16} color="#9A9887" style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%) rotate(-90deg)", pointerEvents: "none" }} />
         </div>
 
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-          <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
+          <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Icône</label>
           <button
             onClick={() => iconImportRef.current?.click()}
-            style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#8B93A1", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}
+            style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", color: "#9A9887", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}
           >
             <Plus size={12} /> Ajouter icône
           </button>
@@ -662,7 +662,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
             }}
           />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6, margin: "8px 0 22px", maxHeight: 180, overflowY: "auto", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, padding: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: 6, margin: "8px 0 22px", maxHeight: 180, overflowY: "auto", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, padding: 8 }}>
           {customIcons.map((ic, i) => (
             <div key={"custom-" + i} style={{ position: "relative" }}>
               <button onClick={() => setIcon(ic)} style={{ width: "100%", fontSize: 18, padding: "6px 0", borderRadius: 8, border: `1px solid ${icon === ic ? c.accent : "transparent"}`, background: icon === ic ? c.accent + "26" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -675,7 +675,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                   if (icon === ic) setIcon(ALL_ICONS[0]);
                 }}
                 title="Supprimer cette icône"
-                style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "#C4574A", border: "1px solid #14171C", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+                style={{ position: "absolute", top: -5, right: -5, width: 16, height: 16, borderRadius: "50%", background: "#C4574A", border: "1px solid #FBF7EA", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
               >
                 <X size={9} strokeWidth={3} />
               </button>
@@ -688,10 +688,10 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           ))}
         </div>
 
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix (facultatif, les deux peuvent être renseignés)</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix (facultatif, les deux peuvent être renseignés)</label>
         <div style={{ display: "flex", gap: 10, margin: "8px 0 20px" }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#6B7280", fontWeight: 600, marginBottom: 6 }}>À l'unité / au paquet</div>
+            <div style={{ fontSize: 11.5, color: "#ADAB98", fontWeight: 600, marginBottom: 6 }}>À l'unité / au paquet</div>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
@@ -699,13 +699,13 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                 value={priceUnit}
                 onChange={(e) => setPriceUnit(e.target.value.replace(/[^0-9,.]/g, ""))}
                 placeholder="0,00"
-                style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+                style={{ width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
               />
-              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#ADAB98", fontSize: 14 }}>€</span>
             </div>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11.5, color: "#6B7280", fontWeight: 600, marginBottom: 6 }}>Au kg</div>
+            <div style={{ fontSize: 11.5, color: "#ADAB98", fontWeight: 600, marginBottom: 6 }}>Au kg</div>
             <div style={{ position: "relative" }}>
               <input
                 type="text"
@@ -713,26 +713,26 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                 value={priceKg}
                 onChange={(e) => setPriceKg(e.target.value.replace(/[^0-9,.]/g, ""))}
                 placeholder="0,00"
-                style={{ width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+                style={{ width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
               />
-              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#6B7280", fontSize: 14 }}>€</span>
+              <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#ADAB98", fontSize: 14 }}>€</span>
             </div>
           </div>
         </div>
 
-        <div style={{ border: "1px solid #2A303A", borderRadius: 10, marginBottom: 22, overflow: "hidden" }}>
+        <div style={{ border: "1px solid #ECE4D0", borderRadius: 10, marginBottom: 22, overflow: "hidden" }}>
           <button
             onClick={() => setVariantsOpen((o) => !o)}
-            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#14171C", border: "none", cursor: "pointer", color: "#F5F3EE" }}
+            style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", background: "#FBF7EA", border: "none", cursor: "pointer", color: "#23262E" }}
           >
             <span style={{ fontSize: 13, fontWeight: 600 }}>
               Sous-produits de cette famille{variants.length > 0 ? ` (${variants.length})` : ""}
             </span>
-            <ChevronLeft size={15} color="#8B93A1" style={{ transform: `rotate(${variantsOpen ? 90 : -90}deg)`, transition: "transform 0.15s" }} />
+            <ChevronLeft size={15} color="#9A9887" style={{ transform: `rotate(${variantsOpen ? 90 : -90}deg)`, transition: "transform 0.15s" }} />
           </button>
           {variantsOpen && (
-            <div style={{ padding: "12px 14px", background: "#1A1F27" }}>
-              <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 12px", lineHeight: 1.4 }}>
+            <div style={{ padding: "12px 14px", background: "#F5F1E4" }}>
+              <p style={{ fontSize: 12, color: "#ADAB98", margin: "0 0 12px", lineHeight: 1.4 }}>
                 Utile pour reconnaître des variétés du même produit sur un ticket de caisse (ex : "Rouge", "Vert", "Jaune" pour un poivron).
               </p>
               {variants.map((v) => (
@@ -741,16 +741,16 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                     value={v.name}
                     onChange={(e) => updateVariant(v.id, e.target.value)}
                     placeholder="ex : Vert"
-                    style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 8, color: "#F5F3EE", fontSize: 14, padding: "9px 10px", outline: "none", fontFamily: "inherit" }}
+                    style={{ flex: 1, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 8, color: "#23262E", fontSize: 14, padding: "9px 10px", outline: "none", fontFamily: "inherit" }}
                   />
-                  <button onClick={() => removeVariant(v.id)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#8B93A1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <button onClick={() => removeVariant(v.id)} style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #ECE4D0", background: "transparent", color: "#9A9887", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <X size={14} />
                   </button>
                 </div>
               ))}
               <button
                 onClick={addVariant}
-                style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, padding: "9px 12px", borderRadius: 8, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, padding: "9px 12px", borderRadius: 8, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
               >
                 <Plus size={14} /> Ajouter un sous-produit
               </button>
@@ -760,7 +760,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
 
         </div>
 
-        <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid #2A303A", flexShrink: 0, background: "#1E232B" }}>
+        <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid #ECE4D0", flexShrink: 0, background: "#FFFFFF" }}>
           {isEdit && onDelete && (
             <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Supprimer
@@ -780,7 +780,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
                 variants: variants.map((v) => ({ id: v.id, name: v.name.trim() })).filter((v) => v.name),
               });
             }}
-            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#2A303A" : c.accent, color: !name.trim() ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
+            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() ? "#ECE4D0" : c.accent, color: !name.trim() ? "#A8A695" : "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() ? "default" : "pointer" }}
           >
             {isEdit ? "Enregistrer" : "Créer l'article"}
           </button>
@@ -812,12 +812,12 @@ function ProductTile({ product, cat, inList, onTap, onLongPress }) {
       onPointerCancel={clear}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: inList ? "#1B2A1C" : cat.tint, border: `1px solid ${inList ? "#6B9B5E" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
+      style={{ background: inList ? "#DCEDD3" : cat.tint, border: `1px solid ${inList ? "#4E9D5B" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
     >
       <span style={{ fontSize: 25 }}><IconGlyph icon={product.icon} size={25} /></span>
-      <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "#8FCB7E" : "#F0EEE8" }}>{product.name}</span>
+      <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "#3F8A4C" : "#23262E" }}>{product.name}</span>
       {formatProductPrice(product) && (
-        <span style={{ fontSize: 10.5, fontWeight: 700, color: inList ? "#6B9B5E" : cat.accent }}>{formatProductPrice(product)}</span>
+        <span style={{ fontSize: 10.5, fontWeight: 700, color: inList ? "#4E9D5B" : cat.accent }}>{formatProductPrice(product)}</span>
       )}
     </button>
   );
@@ -883,7 +883,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <button onClick={onCancel} style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "#9CA3AF", cursor: "pointer" }}>
+        <button onClick={onCancel} style={{ background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 10, width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", color: "#7A7968", cursor: "pointer" }}>
           <ChevronLeft size={18} />
         </button>
         <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: 0 }}>
@@ -891,44 +891,44 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
         </h1>
       </div>
 
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom de la recette</label>
+      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom de la recette</label>
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="ex : Ratatouille maison"
-        style={{ width: "100%", marginTop: 8, marginBottom: 22, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "12px 14px", outline: "none", fontFamily: "inherit" }}
+        style={{ width: "100%", marginTop: 8, marginBottom: 22, background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, color: "#23262E", fontSize: 15, padding: "12px 14px", outline: "none", fontFamily: "inherit" }}
       />
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ingrédients</label>
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Ingrédients</label>
         {(() => {
           const total = estimateRecipeTotal(ingredients, products);
-          return total != null ? <span style={{ fontSize: 13, fontWeight: 700, color: "#F5F3EE" }}>≈ {formatEuro(total)}</span> : null;
+          return total != null ? <span style={{ fontSize: 13, fontWeight: 700, color: "#23262E" }}>≈ {formatEuro(total)}</span> : null;
         })()}
       </div>
       <div style={{ position: "relative", margin: "8px 0 18px" }}>
-        <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10 }}>
-          <Search size={18} color="#6B7280" strokeWidth={2.2} />
+        <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)" }}>
+          <Search size={18} color="#ADAB98" strokeWidth={2.2} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Chercher un ingrédient…"
-            style={{ background: "transparent", border: "none", outline: "none", color: "#F5F3EE", fontSize: 15, width: "100%", fontFamily: "inherit" }}
+            style={{ background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 15, width: "100%", fontFamily: "inherit" }}
             onKeyDown={(e) => { if (e.key === "Enter" && results.length > 0) openAdd(results[0]); }}
           />
         </div>
         {results.length > 0 && (
-          <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, overflow: "hidden", zIndex: 20, boxShadow: "0 12px 28px rgba(0,0,0,0.35)", maxHeight: 300, overflowY: "auto" }}>
+          <div style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 14, overflow: "hidden", zIndex: 20, boxShadow: "0 12px 28px rgba(0,0,0,0.35)", maxHeight: 300, overflowY: "auto" }}>
             {results.map((p, i) => {
               const c = catInfo(p.cat);
               return (
-                <button key={p.id} onClick={() => openAdd(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
+                <button key={p.id} onClick={() => openAdd(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #ECE4D0" : "none", cursor: "pointer", textAlign: "left", color: "#23262E" }}>
                   <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}><IconGlyph icon={p.icon} size={16} /></span>
                   <span style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{p.name}</span>
                   {formatProductPrice(p) && (
                     <span style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>{formatProductPrice(p)}</span>
                   )}
-                  <Plus size={16} color="#6B7280" />
+                  <Plus size={16} color="#ADAB98" />
                 </button>
               );
             })}
@@ -937,7 +937,7 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
       </div>
 
       {ingredients.length === 0 ? (
-        <p style={{ color: "#5B6270", fontSize: 13.5, textAlign: "center", padding: "20px 0" }}>
+        <p style={{ color: "#A8A695", fontSize: 13.5, textAlign: "center", padding: "20px 0" }}>
           Ajoutez des ingrédients avec la recherche ci-dessus.
         </p>
       ) : (
@@ -950,26 +950,26 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
         </div>
       )}
 
-      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Étapes de réalisation</label>
+      <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Étapes de réalisation</label>
 
       {steps.length === 0 ? (
-        <p style={{ color: "#5B6270", fontSize: 13.5, padding: "10px 0 4px" }}>Aucune étape pour l'instant.</p>
+        <p style={{ color: "#A8A695", fontSize: 13.5, padding: "10px 0 4px" }}>Aucune étape pour l'instant.</p>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "10px 0 4px" }}>
           {steps.map((step, idx) => (
-            <div key={idx} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, padding: "10px 12px" }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#2A303A", color: "#9CA3AF", fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
+            <div key={idx} style={{ display: "flex", gap: 10, alignItems: "flex-start", background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, padding: "10px 12px" }}>
+              <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#ECE4D0", color: "#7A7968", fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>
                 {idx + 1}
               </span>
               <textarea
                 value={step}
                 onChange={(e) => updateStep(idx, e.target.value)}
                 rows={2}
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#F5F3EE", fontSize: 14, fontFamily: "inherit", resize: "vertical", lineHeight: 1.4 }}
+                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 14, fontFamily: "inherit", resize: "vertical", lineHeight: 1.4 }}
               />
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flexShrink: 0 }}>
-                <button onClick={() => moveStep(idx, "up")} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? "#3A4150" : "#8B93A1", cursor: idx === 0 ? "default" : "pointer", fontSize: 12, padding: 2 }}>▲</button>
-                <button onClick={() => moveStep(idx, "down")} disabled={idx === steps.length - 1} style={{ background: "none", border: "none", color: idx === steps.length - 1 ? "#3A4150" : "#8B93A1", cursor: idx === steps.length - 1 ? "default" : "pointer", fontSize: 12, padding: 2 }}>▼</button>
+                <button onClick={() => moveStep(idx, "up")} disabled={idx === 0} style={{ background: "none", border: "none", color: idx === 0 ? "#D8CFB0" : "#9A9887", cursor: idx === 0 ? "default" : "pointer", fontSize: 12, padding: 2 }}>▲</button>
+                <button onClick={() => moveStep(idx, "down")} disabled={idx === steps.length - 1} style={{ background: "none", border: "none", color: idx === steps.length - 1 ? "#D8CFB0" : "#9A9887", cursor: idx === steps.length - 1 ? "default" : "pointer", fontSize: 12, padding: 2 }}>▼</button>
                 <button onClick={() => removeStep(idx)} style={{ background: "none", border: "none", color: "#C4574A", cursor: "pointer", fontSize: 13, padding: 2 }}>
                   <X size={13} />
                 </button>
@@ -985,13 +985,13 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
           onChange={(e) => setStepInput(e.target.value)}
           placeholder="Décrire l'étape suivante…"
           rows={2}
-          style={{ flex: 1, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", resize: "vertical" }}
+          style={{ flex: 1, background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, color: "#23262E", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", resize: "vertical" }}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addStep(); } }}
         />
         <button
           onClick={addStep}
           disabled={!stepInput.trim()}
-          style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: 10, border: "none", background: stepInput.trim() ? "#2A303A" : "#1E232B", color: stepInput.trim() ? "#F5F3EE" : "#5B6270", cursor: stepInput.trim() ? "pointer" : "default", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600 }}
+          style={{ alignSelf: "flex-start", padding: "10px 14px", borderRadius: 10, border: "none", background: stepInput.trim() ? "#ECE4D0" : "#FFFFFF", color: stepInput.trim() ? "#23262E" : "#A8A695", cursor: stepInput.trim() ? "pointer" : "default", display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600 }}
         >
           <Plus size={14} /> Ajouter
         </button>
@@ -1005,8 +1005,8 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
           padding: "14px 18px",
           borderRadius: 12,
           border: "none",
-          background: !name.trim() || ingredients.length === 0 ? "#2A303A" : "#F5F3EE",
-          color: !name.trim() || ingredients.length === 0 ? "#5B6270" : "#14171C",
+          background: !name.trim() || ingredients.length === 0 ? "#ECE4D0" : "#4E9D5B",
+          color: !name.trim() || ingredients.length === 0 ? "#A8A695" : "#FFFFFF",
           fontWeight: 700,
           fontSize: 15,
           cursor: !name.trim() || ingredients.length === 0 ? "default" : "pointer",
@@ -1046,7 +1046,7 @@ function RecipeCard({ recipe, onOpen, onOpenAddModal, onLongPress, products }) {
   };
 
   return (
-    <div style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 16, padding: 16, marginBottom: 14 }}>
+    <div style={{ background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 16, padding: 16, marginBottom: 14 }}>
       <div
         onPointerDown={start}
         onPointerUp={clear}
@@ -1060,10 +1060,10 @@ function RecipeCard({ recipe, onOpen, onOpenAddModal, onLongPress, products }) {
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{recipe.name}</h3>
             {total != null && (
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#6B9B5E" }}>≈ {formatEuro(total)}</span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "#4E9D5B" }}>≈ {formatEuro(total)}</span>
             )}
           </div>
-          <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 10 }}>
+          <span style={{ fontSize: 12, color: "#ADAB98", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 10 }}>
             {recipe.ingredients.length} ingrédient{recipe.ingredients.length > 1 ? "s" : ""}
             {recipe.steps?.length > 0 ? ` · ${recipe.steps.length} étape${recipe.steps.length > 1 ? "s" : ""}` : ""}
           </span>
@@ -1079,7 +1079,7 @@ function RecipeCard({ recipe, onOpen, onOpenAddModal, onLongPress, products }) {
             );
           })}
           {recipe.ingredients.length > 5 && (
-            <span style={{ width: 30, height: 30, borderRadius: 8, background: "#2A303A", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#8B93A1", fontWeight: 700 }}>
+            <span style={{ width: 30, height: 30, borderRadius: 8, background: "#ECE4D0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#9A9887", fontWeight: 700 }}>
               +{recipe.ingredients.length - 5}
             </span>
           )}
@@ -1094,8 +1094,8 @@ function RecipeCard({ recipe, onOpen, onOpenAddModal, onLongPress, products }) {
           padding: "11px 14px",
           borderRadius: 10,
           border: "none",
-          background: "#2A303A",
-          color: "#F5F3EE",
+          background: "#ECE4D0",
+          color: "#23262E",
           fontWeight: 700,
           fontSize: 13.5,
           cursor: "pointer",
@@ -1131,18 +1131,18 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0" }}
       >
         <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div style={{ fontSize: 17, fontWeight: 700 }}>{recipe.name}</div>
-            <div style={{ fontSize: 12.5, color: "#8B93A1", marginTop: 2 }}>
+            <div style={{ fontSize: 12.5, color: "#9A9887", marginTop: 2 }}>
               {selected.size} / {recipe.ingredients.length} ingrédient{recipe.ingredients.length > 1 ? "s" : ""} sélectionné{selected.size > 1 ? "s" : ""}
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+            style={{ background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
           >
             <X size={15} />
           </button>
@@ -1166,7 +1166,7 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
                   padding: "10px 10px",
                   marginBottom: 6,
                   borderRadius: 12,
-                  border: `1px solid ${isSelected ? c.accent : "#2A303A"}`,
+                  border: `1px solid ${isSelected ? c.accent : "#ECE4D0"}`,
                   background: isSelected ? c.accent + "1A" : "transparent",
                   cursor: "pointer",
                   textAlign: "left",
@@ -1176,44 +1176,44 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
                   <IconGlyph icon={p.icon} size={16} />
                 </span>
                 <span style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, color: "#F5F3EE" }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: "#23262E" }}>
                     {p.name}{item.note && <span style={{ color: c.accent }}> · {item.note}</span>}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#8B93A1" }}>{item.qty} {item.unit}</div>
+                  <div style={{ fontSize: 11.5, color: "#9A9887" }}>{item.qty} {item.unit}</div>
                 </span>
                 <span
                   style={{
                     width: 22, height: 22, borderRadius: 7, flexShrink: 0,
-                    border: `1.5px solid ${isSelected ? c.accent : "#3A4150"}`,
+                    border: `1.5px solid ${isSelected ? c.accent : "#D8CFB0"}`,
                     background: isSelected ? c.accent : "transparent",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}
                 >
-                  {isSelected && <Check size={13} color="#14171C" strokeWidth={3} />}
+                  {isSelected && <Check size={13} color="#FBF7EA" strokeWidth={3} />}
                 </span>
               </button>
             );
           })}
         </div>
 
-        <div style={{ padding: "14px 20px", borderTop: "1px solid #2A303A", flexShrink: 0, background: "#1E232B" }}>
+        <div style={{ padding: "14px 20px", borderTop: "1px solid #ECE4D0", flexShrink: 0, background: "#FFFFFF" }}>
           <button
             disabled={selected.size === 0}
             onClick={() => onConfirmSelection(recipe, [...selected])}
-            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "none", background: selected.size === 0 ? "#2A303A" : "#6B9B5E", color: selected.size === 0 ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 14.5, cursor: selected.size === 0 ? "default" : "pointer", marginBottom: 12 }}
+            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "none", background: selected.size === 0 ? "#ECE4D0" : "#4E9D5B", color: selected.size === 0 ? "#A8A695" : "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: selected.size === 0 ? "default" : "pointer", marginBottom: 12 }}
           >
             Ajouter la sélection
           </button>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 12px" }}>
-            <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
-            <span style={{ fontSize: 11, color: "#5B6270", fontWeight: 600 }}>ou</span>
-            <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+            <div style={{ flex: 1, height: 1, background: "#ECE4D0" }} />
+            <span style={{ fontSize: 11, color: "#A8A695", fontWeight: 600 }}>ou</span>
+            <div style={{ flex: 1, height: 1, background: "#ECE4D0" }} />
           </div>
 
           <button
             onClick={() => onAddAll(recipe)}
-            style={{ width: "100%", padding: "12px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+            style={{ width: "100%", padding: "12px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
           >
             Tout ajouter
           </button>
@@ -1245,11 +1245,11 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0" }}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0" }}
       >
         <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>Mes listes</div>
-          <button onClick={onClose} style={{ background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
@@ -1260,8 +1260,8 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
               key={l.id}
               style={{
                 display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", marginBottom: 8, borderRadius: 12,
-                border: `1px solid ${l.id === activeListId ? "#6B9B5E" : "#2A303A"}`,
-                background: l.id === activeListId ? "#6B9B5E1A" : "transparent",
+                border: `1px solid ${l.id === activeListId ? "#4E9D5B" : "#ECE4D0"}`,
+                background: l.id === activeListId ? "#4E9D5B1A" : "transparent",
               }}
             >
               {renamingId === l.id ? (
@@ -1271,19 +1271,19 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
                   onChange={(e) => setRenameValue(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") saveRename(); if (e.key === "Escape") setRenamingId(null); }}
                   onBlur={saveRename}
-                  style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 8, color: "#F5F3EE", fontSize: 14.5, padding: "8px 10px", outline: "none", fontFamily: "inherit" }}
+                  style={{ flex: 1, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 8, color: "#23262E", fontSize: 14.5, padding: "8px 10px", outline: "none", fontFamily: "inherit" }}
                 />
               ) : (
                 <button onClick={() => onSelect(l.id)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 600, color: "#F5F3EE" }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: "#23262E" }}>
                     {l.id === activeListId && "✓ "}{l.name}
                   </div>
-                  <div style={{ fontSize: 11.5, color: "#8B93A1", marginTop: 2 }}>
+                  <div style={{ fontSize: 11.5, color: "#9A9887", marginTop: 2 }}>
                     {itemCounts[l.id] || 0} article{(itemCounts[l.id] || 0) > 1 ? "s" : ""} restant{(itemCounts[l.id] || 0) > 1 ? "s" : ""}
                   </div>
                 </button>
               )}
-              <button onClick={() => startRename(l)} title="Renommer" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#8B93A1", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <button onClick={() => startRename(l)} title="Renommer" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #ECE4D0", background: "transparent", color: "#9A9887", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 ✏️
               </button>
               {lists.length > 1 && (
@@ -1302,12 +1302,12 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && newName.trim()) { onCreate(newName); setNewName(""); setCreating(false); } }}
                 placeholder="ex : Apéro, BBQ…"
-                style={{ flex: 1, background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+                style={{ flex: 1, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
               />
               <button
                 disabled={!newName.trim()}
                 onClick={() => { onCreate(newName); setNewName(""); setCreating(false); }}
-                style={{ padding: "0 16px", borderRadius: 10, border: "none", background: newName.trim() ? "#6B9B5E" : "#2A303A", color: newName.trim() ? "#14171C" : "#5B6270", fontWeight: 700, fontSize: 14, cursor: newName.trim() ? "pointer" : "default" }}
+                style={{ padding: "0 16px", borderRadius: 10, border: "none", background: newName.trim() ? "#4E9D5B" : "#ECE4D0", color: newName.trim() ? "#FBF7EA" : "#A8A695", fontWeight: 700, fontSize: 14, cursor: newName.trim() ? "pointer" : "default" }}
               >
                 OK
               </button>
@@ -1315,7 +1315,7 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
           ) : (
             <button
               onClick={() => setCreating(true)}
-              style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}
+              style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}
             >
               <Plus size={14} /> Nouvelle liste
             </button>
@@ -1328,18 +1328,18 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
           onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
           style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
         >
-          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Supprimer cette liste ?</div>
-            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: "#7A7968", margin: "0 0 20px", lineHeight: 1.5 }}>
               Tous ses articles seront supprimés définitivement. Cette action est irréversible.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
                 Annuler
               </button>
               <button
                 onClick={() => { onDelete(confirmDeleteId); setConfirmDeleteId(null); }}
-                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
               >
                 Supprimer
               </button>
@@ -1685,11 +1685,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   }, [remainingItems, products]);
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", justifyContent: "center" }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", justifyContent: "center" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
-        input::placeholder { color: #6B7280; }
+        input::placeholder { color: #ADAB98; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .grow-in { animation: growIn 0.2s ease-out; }
         @keyframes growIn { from { opacity:0; transform: translateY(6px) } to { opacity:1; transform: translateY(0) } }
@@ -1699,18 +1699,18 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       <div style={{ width: "100%", maxWidth: 480, padding: "26px 18px 100px" }}>
         {!(tab === "recettes" && recipeEditing) && (
           <header style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#8B93A1", fontSize: 13, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
-              <ShoppingBasket size={16} strokeWidth={2.2} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#4E9D5B", fontSize: 12.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
+              <ShoppingBasket size={15} strokeWidth={2.4} />
               {householdName || "Foyer"}
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 30, margin: 0, letterSpacing: "-0.01em" }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 32, margin: 0, letterSpacing: "-0.01em" }}>
                 {tab === "liste" ? (activeList?.name || "Ma liste") : tab === "tous" ? "Tous les produits" : "Recettes"}
               </h1>
               {tab === "liste" && (
                 <button
                   onClick={() => setShowListSwitcher(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 999, padding: "7px 12px", color: "#F5F3EE", fontWeight: 600, fontSize: 12.5, cursor: "pointer", flexShrink: 0, marginTop: 4 }}
+                  style={{ display: "flex", alignItems: "center", gap: 5, background: "#E1EED9", border: "none", borderRadius: 999, padding: "9px 14px", color: "#3F8A4C", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, marginTop: 5 }}
                 >
                   <ListChecks size={13} /> Listes
                   <ChevronLeft size={13} style={{ transform: "rotate(-90deg)" }} />
@@ -1718,19 +1718,19 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               )}
             </div>
             {tab === "liste" && (
-              <p style={{ color: "#6B7280", fontSize: 14, margin: "4px 0 0" }}>
+              <p style={{ color: "#ADAB98", fontSize: 14, margin: "6px 0 0" }}>
                 {totalCount === 0
                   ? "Aucun article pour l'instant"
                   : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
               </p>
             )}
             {tab === "liste" && estimatedTotal != null && (
-              <p style={{ fontSize: 26, fontWeight: 800, margin: "6px 0 0", color: estimatedTotal < 70 ? "#6B9B5E" : "#C4574A" }}>
-                ≈ {formatEuro(estimatedTotal)}
+              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 700, margin: "6px 0 0", color: estimatedTotal < 70 ? "#4E9D5B" : "#D9614F" }}>
+                <span style={{ opacity: 0.6, fontSize: 20 }}>≈</span> {formatEuro(estimatedTotal)}
               </p>
             )}
             {tab === "recettes" && (
-              <p style={{ color: "#6B7280", fontSize: 14, margin: "4px 0 0" }}>
+              <p style={{ color: "#ADAB98", fontSize: 14, margin: "4px 0 0" }}>
                 {recipes.length === 0 ? "Aucune recette enregistrée" : `${recipes.length} recette${recipes.length > 1 ? "s" : ""}`}
               </p>
             )}
@@ -1738,7 +1738,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         )}
 
         {!(tab === "recettes" && recipeEditing) && (
-          <div style={{ display: "flex", gap: 6, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, padding: 4, marginBottom: 22 }}>
+          <div style={{ display: "flex", gap: 4, background: "#FFFFFF", border: "none", borderRadius: 18, padding: 6, marginBottom: 22, boxShadow: "0 4px 14px rgba(35,38,46,0.06)" }}>
             {[
               { key: "liste", label: "Ma liste", icon: ListChecks },
               { key: "tous", label: "Tous les produits", icon: Grid3x3 },
@@ -1747,7 +1747,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "9px 6px", borderRadius: 9, border: "none", background: tab === t.key ? "#2A303A" : "transparent", color: tab === t.key ? "#F5F3EE" : "#6B7280", fontWeight: 600, fontSize: 12, cursor: "pointer" }}
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "11px 6px", borderRadius: 13, border: "none", background: tab === t.key ? "#E1EED9" : "transparent", color: tab === t.key ? "#3F8A4C" : "#9A9887", fontWeight: 700, fontSize: 12, cursor: "pointer" }}
               >
                 <t.icon size={14} />
                 {t.label}
@@ -1758,48 +1758,48 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
         {tab === "liste" && (
           <div style={{ position: "relative", marginBottom: 26 }}>
-            <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10 }}>
-              <Search size={18} color="#6B7280" strokeWidth={2.2} />
+            <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)" }}>
+              <Search size={18} color="#ADAB98" strokeWidth={2.2} />
               <input
                 ref={inputRef}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Chercher un produit…"
-                style={{ background: "transparent", border: "none", outline: "none", color: "#F5F3EE", fontSize: 15, width: "100%", fontFamily: "inherit" }}
+                style={{ background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 15, width: "100%", fontFamily: "inherit" }}
                 onKeyDown={(e) => { if (e.key === "Enter" && results.length > 0) openAddModal(results[0]); }}
               />
               {query && (
-                <button onClick={() => setQuery("")} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
+                <button onClick={() => setQuery("")} style={{ background: "none", border: "none", color: "#ADAB98", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
                   <X size={16} />
                 </button>
               )}
             </div>
             {results.length > 0 && (
-              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, overflow: "hidden", zIndex: 10, boxShadow: "0 12px 28px rgba(0,0,0,0.35)", maxHeight: 320, overflowY: "auto" }}>
+              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 14, overflow: "hidden", zIndex: 10, boxShadow: "0 12px 28px rgba(0,0,0,0.35)", maxHeight: 320, overflowY: "auto" }}>
                 {results.map((p, i) => {
                   const c = catInfo(p.cat);
                   return (
-                    <button key={p.id} onClick={() => openAddModal(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #262B34" : "none", cursor: "pointer", textAlign: "left", color: "#F5F3EE" }}>
+                    <button key={p.id} onClick={() => openAddModal(p)} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "11px 14px", background: "transparent", border: "none", borderBottom: i < results.length - 1 ? "1px solid #ECE4D0" : "none", cursor: "pointer", textAlign: "left", color: "#23262E" }}>
                       <span style={{ width: 34, height: 34, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}><IconGlyph icon={p.icon} size={17} /></span>
                       <span style={{ flex: 1, fontSize: 14.5, fontWeight: 500 }}>{p.name}</span>
                       <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
                         <span style={{ fontSize: 10.5, color: c.accent, fontWeight: 600 }}>{c.label}</span>
                         {formatProductPrice(p) && (
-                          <span style={{ fontSize: 11, color: "#F5F3EE", fontWeight: 700 }}>{formatProductPrice(p)}</span>
+                          <span style={{ fontSize: 11, color: "#23262E", fontWeight: 700 }}>{formatProductPrice(p)}</span>
                         )}
                       </span>
-                      <Plus size={16} color="#6B7280" />
+                      <Plus size={16} color="#ADAB98" />
                     </button>
                   );
                 })}
               </div>
             )}
             {query && results.length === 0 && (
-              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "14px", zIndex: 10 }}>
-                <p style={{ fontSize: 13.5, color: "#6B7280", margin: "0 0 10px" }}>Aucun produit trouvé pour « {query} »</p>
+              <div className="grow-in" style={{ position: "absolute", top: "calc(100% + 8px)", left: 0, right: 0, background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 14, padding: "14px", zIndex: 10 }}>
+                <p style={{ fontSize: 13.5, color: "#ADAB98", margin: "0 0 10px" }}>Aucun produit trouvé pour « {query} »</p>
                 <button
                   onClick={addCustomFromSearch}
-                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+                  style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
                 >
                   <Plus size={14} /> Ajouter « {query} » comme article personnalisé
                 </button>
@@ -1810,7 +1810,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
         {tab === "liste" &&
           (grouped.length === 0 && boughtItems.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 16px", color: "#4B5563" }}>
+            <div style={{ textAlign: "center", padding: "48px 16px", color: "#C9C3AE" }}>
               <div style={{ fontSize: 38, marginBottom: 10 }}>🧺</div>
               <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>Cherchez un produit ci-dessus pour<br />commencer votre liste.</p>
             </div>
@@ -1819,8 +1819,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               <section key={cat.key} style={{ marginBottom: 26 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
                   <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                  <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.entries.length}</span>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#23262E" }}>{cat.label}</h2>
+                  <span style={{ fontSize: 12, color: "#A8A695", fontWeight: 600 }}>{cat.entries.length}</span>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                   {cat.entries.map(({ item, product }) => (
@@ -1834,9 +1834,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         {tab === "liste" && boughtItems.length > 0 && (
           <section style={{ marginBottom: 26, marginTop: grouped.length === 0 ? 0 : 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#4B5563", flexShrink: 0 }} />
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#8B93A1" }}>Déjà acheté</h2>
-              <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{boughtItems.length}</span>
+              <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#C9C3AE", flexShrink: 0 }} />
+              <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#9A9887" }}>Déjà acheté</h2>
+              <span style={{ fontSize: 12, color: "#A8A695", fontWeight: 600 }}>{boughtItems.length}</span>
               <button
                 onClick={() => setConfirmClearBought(true)}
                 title="Vider les articles déjà achetés"
@@ -1858,22 +1858,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
               <button
                 onClick={openNewProductModal}
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               >
                 <Plus size={16} /> Nouvel article
               </button>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 14, padding: "12px 14px", gap: 10, marginBottom: 20 }}>
-              <Search size={18} color="#6B7280" strokeWidth={2.2} />
+            <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)", marginBottom: 20 }}>
+              <Search size={18} color="#ADAB98" strokeWidth={2.2} />
               <input
                 value={catalogQuery}
                 onChange={(e) => setCatalogQuery(e.target.value)}
                 placeholder="Filtrer un produit du catalogue…"
-                style={{ background: "transparent", border: "none", outline: "none", color: "#F5F3EE", fontSize: 15, width: "100%", fontFamily: "inherit" }}
+                style={{ background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 15, width: "100%", fontFamily: "inherit" }}
               />
               {catalogQuery && (
-                <button onClick={() => setCatalogQuery("")} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
+                <button onClick={() => setCatalogQuery("")} style={{ background: "none", border: "none", color: "#ADAB98", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
                   <X size={16} />
                 </button>
               )}
@@ -1881,7 +1881,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
             {catalogQuery ? (
               catalogFiltered.length === 0 ? (
-                <p style={{ color: "#5B6270", fontSize: 13.5, textAlign: "center", padding: "24px 0" }}>
+                <p style={{ color: "#A8A695", fontSize: 13.5, textAlign: "center", padding: "24px 0" }}>
                   Aucun produit ne correspond à « {catalogQuery} »
                 </p>
               ) : (
@@ -1904,11 +1904,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                       style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
                     >
                       <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                      <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#E5E3DD" }}>{cat.label}</h2>
-                      <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600 }}>{cat.products.length}</span>
+                      <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#23262E" }}>{cat.label}</h2>
+                      <span style={{ fontSize: 12, color: "#A8A695", fontWeight: 600 }}>{cat.products.length}</span>
                       <ChevronLeft
                         size={16}
-                        color="#5B6270"
+                        color="#A8A695"
                         style={{ marginLeft: "auto", transform: isCollapsed ? "rotate(180deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}
                       />
                     </div>
@@ -1933,13 +1933,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             <>
               <button
                 onClick={() => setRecipeEditing({})}
-                style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #3A4150", background: "transparent", color: "#9CA3AF", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}
+                style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}
               >
                 <Plus size={16} /> Nouvelle recette
               </button>
 
               {recipes.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 16px", color: "#4B5563" }}>
+                <div style={{ textAlign: "center", padding: "40px 16px", color: "#C9C3AE" }}>
                   <div style={{ fontSize: 38, marginBottom: 10 }}>📖</div>
                   <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>Créez votre première recette<br />avec ses ingrédients.</p>
                 </div>
@@ -1993,22 +1993,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+            style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
           >
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Supprimer cette recette ?</div>
-            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: "#7A7968", margin: "0 0 20px", lineHeight: 1.5 }}>
               « {confirmDeleteRecipe.name} » sera définitivement supprimée. Cette action est irréversible.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setConfirmDeleteRecipe(null)}
-                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
               >
                 Annuler
               </button>
               <button
                 onClick={() => deleteRecipe(confirmDeleteRecipe.id)}
-                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
               >
                 Supprimer
               </button>
@@ -2024,22 +2024,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+            style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
           >
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Vider « Déjà acheté » ?</div>
-            <p style={{ fontSize: 14, color: "#9CA3AF", margin: "0 0 20px", lineHeight: 1.5 }}>
+            <p style={{ fontSize: 14, color: "#7A7968", margin: "0 0 20px", lineHeight: 1.5 }}>
               {boughtItems.length} article{boughtItems.length > 1 ? "s" : ""} grisé{boughtItems.length > 1 ? "s" : ""} {boughtItems.length > 1 ? "seront supprimés" : "sera supprimé"} de la liste. Tu pourras annuler juste après si besoin.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
                 onClick={() => setConfirmClearBought(false)}
-                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
               >
                 Annuler
               </button>
               <button
                 onClick={clearBought}
-                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
               >
                 Vider
               </button>
@@ -2063,13 +2063,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
       {undoState && (
         <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 18px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#242A33", border: "1px solid #3A4150", borderRadius: 14, padding: "12px 16px", boxShadow: "0 12px 28px rgba(0,0,0,0.4)", maxWidth: 440, width: "100%" }}>
-            <span style={{ fontSize: 13.5, color: "#F5F3EE", flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#FFFFFF", border: "1px solid #D8CFB0", borderRadius: 14, padding: "12px 16px", boxShadow: "0 12px 28px rgba(0,0,0,0.4)", maxWidth: 440, width: "100%" }}>
+            <span style={{ fontSize: 13.5, color: "#23262E", flex: 1 }}>
               {undoState.items.length > 1 ? `${undoState.items.length} articles supprimés` : "Article supprimé"}
             </span>
             <button
               onClick={restoreUndo}
-              style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
+              style={{ background: "none", border: "none", color: "#4E9D5B", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
             >
               Annuler
             </button>
@@ -2086,27 +2086,27 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+            style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
               <span style={{ fontSize: 17, fontWeight: 700 }}>🛠️ Options</span>
-              <button onClick={onCloseOptions} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button onClick={onCloseOptions} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <X size={15} />
               </button>
             </div>
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix</label>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix</label>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button
                 onClick={exportPrices}
                 title="Télécharger une sauvegarde des prix actuels"
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#14171C", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #ECE4D0", background: "#FBF7EA", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
               >
                 Exporter les prix
               </button>
               <button
                 onClick={() => priceImportRef.current?.click()}
                 title="Importer un fichier de prix — appliqué une fois pour toutes, puis synchronisé avec le foyer"
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #2A303A", background: "#14171C", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #ECE4D0", background: "#FBF7EA", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
               >
                 Importer des prix
               </button>
@@ -2167,8 +2167,8 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
   const [sent, setSent] = useState(false);
   const [newUserMode, setNewUserMode] = useState(!!initialCode); // ouvert d'office si on arrive via un lien d'invitation
 
-  const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
-  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
+  const inputStyle = { width: "100%", background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, color: "#23262E", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
 
   const submitExisting = async () => { await onLoginExisting({ email }); };
   const submitNew = async () => {
@@ -2178,16 +2178,16 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
 
   if (sent) {
     return (
-      <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 14 }}>📬</div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: "0 0 10px" }}>Vérifie ta boîte mail</h1>
-          <p style={{ color: "#8B93A1", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
-            On a envoyé un lien de connexion à <strong style={{ color: "#F5F3EE" }}>{email}</strong>. Ouvre-le pour finaliser la création de ton compte — ensuite, une simple adresse email suffira pour te reconnecter.
+          <p style={{ color: "#9A9887", fontSize: 14, lineHeight: 1.6, margin: "0 0 22px" }}>
+            On a envoyé un lien de connexion à <strong style={{ color: "#23262E" }}>{email}</strong>. Ouvre-le pour finaliser la création de ton compte — ensuite, une simple adresse email suffira pour te reconnecter.
           </p>
           <button
             onClick={() => setSent(false)}
-            style={{ background: "none", border: "none", color: "#6B9B5E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+            style={{ background: "none", border: "none", color: "#4E9D5B", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
           >
             Mauvaise adresse ? Recommencer
           </button>
@@ -2197,12 +2197,12 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
   }
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
           <div style={{ fontSize: 40, marginBottom: 10 }}>🧺</div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, margin: 0 }}>Liste de Courses</h1>
-          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Connecte-toi pour accéder à ton foyer</p>
+          <p style={{ color: "#ADAB98", fontSize: 13.5, margin: "6px 0 0" }}>Connecte-toi pour accéder à ton foyer</p>
         </div>
 
         <label style={labelStyle}>Email</label>
@@ -2214,24 +2214,24 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
         <button
           disabled={loading || !email}
           onClick={submitExisting}
-          style={{ width: "100%", padding: "15px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#2A303A" : "#6B9B5E", color: loading || !email ? "#5B6270" : "#14171C", fontWeight: 700, fontSize: 16, cursor: loading || !email ? "default" : "pointer" }}
+          style={{ width: "100%", padding: "15px 18px", borderRadius: 12, border: "none", background: loading || !email ? "#ECE4D0" : "#4E9D5B", color: loading || !email ? "#A8A695" : "#FBF7EA", fontWeight: 700, fontSize: 16, cursor: loading || !email ? "default" : "pointer" }}
         >
           {loading ? "Connexion…" : "Connexion"}
         </button>
-        <p style={{ color: "#4B5563", fontSize: 11.5, textAlign: "center", margin: "10px 0 0", lineHeight: 1.4 }}>
+        <p style={{ color: "#C9C3AE", fontSize: 11.5, textAlign: "center", margin: "10px 0 0", lineHeight: 1.4 }}>
           Déjà un compte ? Ton email suffit, aucun email de vérification n'est renvoyé.
         </p>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0 18px" }}>
-          <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
-          <span style={{ fontSize: 12, color: "#5B6270", fontWeight: 600, whiteSpace: "nowrap" }}>Nouvel utilisateur ?</span>
-          <div style={{ flex: 1, height: 1, background: "#2A303A" }} />
+          <div style={{ flex: 1, height: 1, background: "#ECE4D0" }} />
+          <span style={{ fontSize: 12, color: "#A8A695", fontWeight: 600, whiteSpace: "nowrap" }}>Nouvel utilisateur ?</span>
+          <div style={{ flex: 1, height: 1, background: "#ECE4D0" }} />
         </div>
 
         {!newUserMode ? (
           <button
             onClick={() => setNewUserMode(true)}
-            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
+            style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}
           >
             Recevoir un lien de connexion
           </button>
@@ -2248,7 +2248,7 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
             <button
               disabled={loading || !email}
               onClick={submitNew}
-              style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: loading || !email ? "#5B6270" : "#F5F3EE", fontWeight: 600, fontSize: 14, cursor: loading || !email ? "default" : "pointer" }}
+              style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: loading || !email ? "#A8A695" : "#23262E", fontWeight: 600, fontSize: 14, cursor: loading || !email ? "default" : "pointer" }}
             >
               {loading ? "Envoi…" : "Recevoir mon lien de connexion"}
             </button>
@@ -2264,26 +2264,26 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
 function HouseholdScreen({ onCreate, onJoin, error }) {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const inputStyle = { width: "100%", background: "#1E232B", border: "1px solid #2A303A", borderRadius: 12, color: "#F5F3EE", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 12, boxSizing: "border-box" };
+  const inputStyle = { width: "100%", background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, color: "#23262E", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 12, boxSizing: "border-box" };
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#14171C", minHeight: "100vh", color: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, margin: 0 }}>Ton foyer</h1>
-          <p style={{ color: "#6B7280", fontSize: 13.5, margin: "6px 0 0" }}>Crée ton foyer, ou rejoins-en un avec un code reçu.</p>
+          <p style={{ color: "#ADAB98", fontSize: 13.5, margin: "6px 0 0" }}>Crée ton foyer, ou rejoins-en un avec un code reçu.</p>
         </div>
 
         <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du foyer (ex : Famille Dupont)" />
-        <button onClick={() => onCreate(name)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "#6B9B5E", color: "#14171C", fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 22 }}>
+        <button onClick={() => onCreate(name)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "none", background: "#4E9D5B", color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer", marginBottom: 22 }}>
           Créer ce foyer
         </button>
 
-        <div style={{ textAlign: "center", color: "#4B5563", fontSize: 12, margin: "0 0 16px" }}>— ou —</div>
+        <div style={{ textAlign: "center", color: "#C9C3AE", fontSize: 12, margin: "0 0 16px" }}>— ou —</div>
 
         <input style={inputStyle} value={code} onChange={(e) => setCode(e.target.value)} placeholder="Code du foyer" />
-        <button onClick={() => onJoin(code)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+        <button onClick={() => onJoin(code)} style={{ width: "100%", padding: "13px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
           Rejoindre avec ce code
         </button>
 
@@ -2299,15 +2299,15 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
   const [pseudoInput, setPseudoInput] = useState(pseudo || "");
   const [status, setStatus] = useState("");
 
-  const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit", marginTop: 8, marginBottom: 16, boxSizing: "border-box" };
-  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" };
+  const fieldStyle = { width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14.5, padding: "11px 12px", outline: "none", fontFamily: "inherit", marginTop: 8, marginBottom: 16, boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#F5F3EE" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>👤 Mon compte</span>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
@@ -2320,15 +2320,15 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
           <input style={{ ...fieldStyle, margin: 0 }} value={pseudoInput} onChange={(e) => setPseudoInput(e.target.value)} />
           <button
             onClick={async () => { setStatus(""); const ok = await onSavePseudo(pseudoInput.trim()); setStatus(ok ? "✓ Enregistré" : "❌ Erreur"); }}
-            style={{ padding: "0 16px", borderRadius: 10, border: "none", background: "#2A303A", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+            style={{ padding: "0 16px", borderRadius: 10, border: "none", background: "#ECE4D0", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
           >
             OK
           </button>
         </div>
 
-        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "0 0 18px" }} />
+        <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "0 0 18px" }} />
 
-        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") ? "#6B9B5E" : "#C4574A", margin: "4px 0 4px" }}>{status}</p>}
+        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") ? "#4E9D5B" : "#C4574A", margin: "4px 0 4px" }}>{status}</p>}
 
         <button
           onClick={onLogout}
@@ -2350,16 +2350,16 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
   const [status, setStatus] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const fieldStyle = { width: "100%", background: "#14171C", border: "1px solid #2A303A", borderRadius: 10, color: "#F5F3EE", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
-  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#8B93A1", textTransform: "uppercase", letterSpacing: "0.04em" };
-  const smallBtn = { padding: "0 14px", borderRadius: 10, border: "none", background: "#2A303A", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" };
+  const fieldStyle = { width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
+  const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" };
+  const smallBtn = { padding: "0 14px", borderRadius: 10, border: "none", background: "#ECE4D0", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#1E232B", borderTop: "1px solid #2A303A", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#F5F3EE" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Mon foyer</span>
-          <button onClick={onClose} style={{ marginLeft: "auto", background: "#2A303A", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#9CA3AF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
@@ -2373,23 +2373,23 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
         <label style={labelStyle}>Membres</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 20px" }}>
           {profiles.length === 0 ? (
-            <p style={{ color: "#5B6270", fontSize: 13.5, margin: 0 }}>Personne d'autre pour l'instant.</p>
+            <p style={{ color: "#A8A695", fontSize: 13.5, margin: 0 }}>Personne d'autre pour l'instant.</p>
           ) : profiles.map((p) => (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#14171C", border: "1px solid #2A303A", borderRadius: 12, padding: "10px 14px" }}>
-              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#6B9B5E26", color: "#6B9B5E", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 12, padding: "10px 14px" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#4E9D5B26", color: "#4E9D5B", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                 {(p.pseudo || "?").slice(0, 1).toUpperCase()}
               </span>
               <span style={{ fontSize: 14, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
-              {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#6B9B5E", fontWeight: 600 }}>Toi</span>}
+              {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#4E9D5B", fontWeight: 600 }}>Toi</span>}
             </div>
           ))}
         </div>
 
         <label style={labelStyle}>Inviter quelqu'un</label>
-        <p style={{ fontSize: 12.5, color: "#6B7280", margin: "6px 0 8px" }}>Ce lien connecte directement la personne à ce foyer (elle doit avoir un compte).</p>
+        <p style={{ fontSize: 12.5, color: "#ADAB98", margin: "6px 0 8px" }}>Ce lien connecte directement la personne à ce foyer (elle doit avoir un compte).</p>
         <button
           onClick={() => { navigator.clipboard?.writeText(inviteLink); setStatus("🔗 Lien copié !"); }}
-          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 20 }}
+          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 20 }}
         >
           📋 Copier le lien d'invitation
         </button>
@@ -2403,7 +2403,7 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
                   key={h.id}
                   onClick={() => onSwitch(h.id)}
                   disabled={h.id === currentHouseholdId}
-                  style={{ textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `1px solid ${h.id === currentHouseholdId ? "#6B9B5E" : "#2A303A"}`, background: h.id === currentHouseholdId ? "#6B9B5E26" : "transparent", color: h.id === currentHouseholdId ? "#6B9B5E" : "#F5F3EE", fontWeight: 600, fontSize: 13.5, cursor: h.id === currentHouseholdId ? "default" : "pointer" }}
+                  style={{ textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `1px solid ${h.id === currentHouseholdId ? "#4E9D5B" : "#ECE4D0"}`, background: h.id === currentHouseholdId ? "#4E9D5B26" : "transparent", color: h.id === currentHouseholdId ? "#4E9D5B" : "#23262E", fontWeight: 600, fontSize: 13.5, cursor: h.id === currentHouseholdId ? "default" : "pointer" }}
                 >
                   {h.name} {h.id === currentHouseholdId ? " · actif" : ""}
                 </button>
@@ -2412,7 +2412,7 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
           </>
         )}
 
-        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "0 0 18px" }} />
+        <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "0 0 18px" }} />
 
         <label style={labelStyle}>Rejoindre un autre foyer</label>
         <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
@@ -2426,9 +2426,9 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
           <button style={smallBtn} onClick={async () => { const ok = await onCreate(newName.trim()); setStatus(ok ? "✓ Foyer créé" : "❌ Erreur"); if (ok) setNewName(""); }}>Créer</button>
         </div>
 
-        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") ? "#6B9B5E" : "#C4574A", marginTop: 16 }}>{status}</p>}
+        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") ? "#4E9D5B" : "#C4574A", marginTop: 16 }}>{status}</p>}
 
-        <hr style={{ border: "none", borderTop: "1px solid #2A303A", margin: "22px 0 16px" }} />
+        <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "22px 0 16px" }} />
         <label style={{ ...labelStyle, color: "#C4574A" }}>Zone dangereuse</label>
         {!confirmDelete ? (
           <button
@@ -2438,15 +2438,15 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
             🗑️ Supprimer ce foyer
           </button>
         ) : (
-          <div style={{ marginTop: 10, background: "#2A1414", border: "1px solid #C4574A55", borderRadius: 10, padding: 14 }}>
-            <p style={{ fontSize: 12.5, color: "#F5F3EE", margin: "0 0 12px", lineHeight: 1.5 }}>
+          <div style={{ marginTop: 10, background: "#FBE5E1", border: "1px solid #C4574A55", borderRadius: 10, padding: 14 }}>
+            <p style={{ fontSize: 12.5, color: "#23262E", margin: "0 0 12px", lineHeight: 1.5 }}>
               Supprimer "{householdName}" effacera la liste, les recettes et l'accès pour tous ses membres, définitivement. Continuer ?
             </p>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #2A303A", background: "transparent", color: "#F5F3EE", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Annuler</button>
               <button
                 onClick={async () => { const ok = await onDelete(); if (!ok) { setStatus("❌ Erreur"); setConfirmDelete(false); } }}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#C4574A", color: "#14171C", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
               >
                 Oui, supprimer
               </button>
@@ -2763,36 +2763,40 @@ function Root() {
   }, [session?.user?.id, currentHouseholdId]);
 
   if (session === undefined) {
-    return <div style={{ background: "#14171C", minHeight: "100vh" }} />;
+    return <div style={{ background: "#FBF7EA", minHeight: "100vh" }} />;
   }
   if (session === null) {
     return <LoginScreen onLoginExisting={handleLoginExisting} onLoginNew={handleLoginNew} loading={loginLoading} error={loginError} initialCode={pendingJoinCode} />;
   }
   if (!householdsReady) {
-    return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
+    return <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#ADAB98", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
   }
   if (!currentHouseholdId) {
     return <HouseholdScreen onCreate={handleCreateHousehold} onJoin={handleJoinHousehold} error={householdError} />;
   }
   if (!initialData) {
-    return <div style={{ background: "#14171C", minHeight: "100vh", color: "#6B7280", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement du foyer…</div>;
+    return <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#ADAB98", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement du foyer…</div>;
   }
 
   const currentHousehold = myHouseholds.find((h) => h.id === currentHouseholdId);
   const inviteLink = location.origin + location.pathname + "#foyer=" + currentHouseholdId;
 
   return (
-    <div style={{ background: "#14171C", minHeight: "100vh", color: "#F5F3EE" }}>
+    <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#23262E" }}>
       {offline && (
-        <div style={{ background: "#3A2A10", color: "#F7C44F", fontSize: 12.5, fontWeight: 600, textAlign: "center", padding: "8px 12px" }}>
+        <div style={{ background: "#FBEFDC", color: "#8A5A15", fontSize: 12.5, fontWeight: 600, textAlign: "center", padding: "8px 12px" }}>
           ⚠️ Hors-ligne — tes changements sont gardés sur cet appareil et seront envoyés dès que la connexion revient
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "10px 14px 0", maxWidth: 480, margin: "0 auto" }}>
-        <button onClick={() => setShowOptions(true)} title="Options" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🛠️</button>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>🏠</button>
-          <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#1E232B", border: "1px solid #2A303A", borderRadius: 10, width: 34, height: 34, color: "#9CA3AF", cursor: "pointer", fontSize: 15 }}>👤</button>
+
+      {/* Bandeau à volants façon auvent de marché */}
+      <div style={{ height: 40, backgroundImage: "url('data:image/png;base64,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g7Q9Y4y0d5C2Z4yR9g7S9owx0t5B2p4xRto7SNszxkh7B2l7xhhp7yBtzxgj7R2k7RljpL2DtD1jjLR3kLZnjDHqHQw7wL3d8paNc6XOX3T3ljr/1H3jHKnzT903zpE6/9R94xyp80/dN86ROv/UfeMcqfNP3TfOkTr/1H3jHKnzT903zpE6/9R94xyp80/dN86ROv/UfeMcqfNP3TfOkTr/1H3jHKnzT903zjFy/kMPcG+33KXjPelzF909pc89fe94Tfrc0/eO16TPPX3veE363NP3jtekzz1973hN+tzT947XpM89fe94Tfrc0/eO16TPPX3veE363NP3jtekzz1973hN+tzT947XpM89fe94Tfrc0/eO14ye+/AD3Nstf/moWWXeoruXVea9yv5xzCrzXmX/OGaVea+yfxyzyrxX2T+OWWXeq+wfx6wy71X2j2NWmfcq+8cxq8x7lf3jmFXmvcr+ccwq815l/zhmlXmvsn8cs8q8V9k/jlll3qvsH8esMu9V9o9jrpj3JQe4t9s6S8hfW23OoruH1ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rmr5nzZAe7ttt4y8tGq8xXdta0631X3kbtV57vqPnK36nxX3UfuVp3vqvvI3arzXXUfuVt1vqvuI3erznfVfeRu1fmuuo/crTrfVfeRu1Xnu+o+crfqfFfdR+5Wne+q+8jdqvNddR+5W3W+q+4jd1fO99ID3Ntt3aXc3epzFd01rT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXVc738APd2W385d7PLPEV3LbvMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3cxY55TDnBvt32WdHW7zVF017DbHHfb01XtNsfd9nRVu81xtz1d1W5z3G1PV7XbHHfb01XtNsfd9nRV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')", backgroundRepeat: "repeat-x", backgroundSize: "auto 40px", backgroundPosition: "left top" }} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "0 14px", maxWidth: 480, margin: "-20px auto 0", position: "relative", zIndex: 2 }}>
+        <button onClick={() => setShowOptions(true)} title="Options" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "#4E9D5B", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🛠️</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "#4E9D5B", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🏠</button>
+          <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "#4E9D5B", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>👤</button>
         </div>
       </div>
 
