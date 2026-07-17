@@ -2800,6 +2800,12 @@ function Root() {
 
   return (
     <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#23262E" }}>
+      <img
+        src="./lemon-deco.png"
+        alt=""
+        aria-hidden="true"
+        style={{ position: "fixed", right: -40, bottom: -35, width: 130, opacity: 0.55, pointerEvents: "none", zIndex: -1 }}
+      />
       {offline && (
         <div style={{ background: "#FBEFDC", color: "#8A5A15", fontSize: 12.5, fontWeight: 600, textAlign: "center", padding: "8px 12px" }}>
           ⚠️ Hors-ligne — tes changements sont gardés sur cet appareil et seront envoyés dès que la connexion revient
