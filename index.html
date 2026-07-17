@@ -1687,7 +1687,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   }, [remainingItems, products]);
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", justifyContent: "center" }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "#FBF7EA", minHeight: "100vh", color: "#23262E", display: "flex", justifyContent: "center", position: "relative", zIndex: 0 }}>
+      <img
+        src="./lemon-deco.png"
+        alt=""
+        aria-hidden="true"
+        style={{ position: "fixed", right: -40, bottom: -35, width: 150, opacity: 0.7, pointerEvents: "none", zIndex: -1 }}
+      />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
@@ -2800,12 +2806,6 @@ function Root() {
 
   return (
     <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#23262E", position: "relative", zIndex: 0 }}>
-      <img
-        src="./lemon-deco.png"
-        alt=""
-        aria-hidden="true"
-        style={{ position: "fixed", right: -40, bottom: -35, width: 150, opacity: 0.7, pointerEvents: "none", zIndex: -1 }}
-      />
       {offline && (
         <div style={{ background: "#FBEFDC", color: "#8A5A15", fontSize: 12.5, fontWeight: 600, textAlign: "center", padding: "8px 12px" }}>
           ⚠️ Hors-ligne — tes changements sont gardés sur cet appareil et seront envoyés dès que la connexion revient
