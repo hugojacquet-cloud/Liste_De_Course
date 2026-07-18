@@ -45,6 +45,16 @@ window.addEventListener('error', function (e) {
 <script type="text/babel" data-presets="react">
 const { useState, useMemo, useRef, useEffect } = React;
 
+// Capture l'invite d'installation native (Android/Chrome) dès qu'elle est proposée par le
+// navigateur, pour pouvoir la déclencher plus tard depuis le bouton dans Options.
+// Sur iOS, cet événement n'existe pas du tout (Apple ne l'expose pas) — géré séparément.
+let deferredInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+});
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
 // --- Icônes SVG légères (remplacent lucide-react pour la version autonome) ---
 function Icon({ size = 16, color = "currentColor", strokeWidth = 2, style, children }) {
   return (
@@ -1380,6 +1390,16 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
   const [customIcons, setCustomIcons] = useState(() => initialData?.customIcons ?? []); // icônes/emoji perso importés (data URLs)
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
+  const [showIosHelp, setShowIosHelp] = useState(false);
+  const [androidInstalled, setAndroidInstalled] = useState(false);
+
+  const installAndroid = async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === "accepted") setAndroidInstalled(true);
+    deferredInstallPrompt = null;
+  };
   const priceImportRef = useRef(null);
   const inputRef = useRef(null);
   const lastAppliedRemoteVersion = useRef(0);
@@ -2126,6 +2146,62 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
               />
             </div>
+
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Installer l'application</label>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button
+                onClick={installAndroid}
+                disabled={!deferredInstallPrompt && !androidInstalled}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #ECE4D0", background: androidInstalled ? "#E1EED9" : "#FBF7EA", color: !deferredInstallPrompt && !androidInstalled ? "#C9C3AE" : androidInstalled ? "#3F8A4C" : "#23262E", fontWeight: 600, fontSize: 13.5, cursor: !deferredInstallPrompt && !androidInstalled ? "default" : "pointer" }}
+              >
+                🤖 {androidInstalled ? "Installée ✓" : deferredInstallPrompt ? "Installer (Android)" : "Déjà installée / non dispo"}
+              </button>
+              <button
+                onClick={() => setShowIosHelp(true)}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid #ECE4D0", background: "#FBF7EA", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+              >
+                🍏 Installer (iPhone)
+              </button>
+            </div>
+            <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 0", lineHeight: 1.4 }}>
+              Sur Android, le bouton lance l'installation directement. Sur iPhone, Apple ne permet pas de le faire automatiquement — le bouton affiche la marche à suivre (3 étapes, 10 secondes).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showIosHelp && (
+        <div
+          onClick={() => setShowIosHelp(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <span style={{ fontSize: 17, fontWeight: 700 }}>🍏 Installer sur iPhone</span>
+              <button onClick={() => setShowIosHelp(false)} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} />
+              </button>
+            </div>
+            <p style={{ fontSize: 12.5, color: "#ADAB98", margin: "0 0 18px", lineHeight: 1.5 }}>
+              Apple ne permet pas aux sites web de déclencher l'installation automatiquement — Safari impose ces 3 étapes manuelles :
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[
+                { n: "1", icon: "⬆️", text: <>Ouvre cette page dans <b>Safari</b>, puis appuie sur l'icône <b>Partager</b> (le carré avec une flèche vers le haut) en bas de l'écran.</> },
+                { n: "2", icon: "➕", text: <>Fais défiler la liste et appuie sur <b>"Sur l'écran d'accueil"</b>.</> },
+                { n: "3", icon: "✅", text: <>Appuie sur <b>"Ajouter"</b> en haut à droite. L'icône apparaît sur ton écran d'accueil, comme une vraie appli.</> },
+              ].map((step) => (
+                <div key={step.n} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <span style={{ width: 32, height: 32, borderRadius: "50%", background: "#E1EED9", color: "#3F8A4C", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{step.n}</span>
+                  <p style={{ fontSize: 14, color: "#23262E", margin: "5px 0 0", lineHeight: 1.5 }}>{step.icon} {step.text}</p>
+                </div>
+              ))}
+            </div>
+            {!isIOS && (
+              <p style={{ fontSize: 12, color: "#C4574A", margin: "18px 0 0", lineHeight: 1.5 }}>
+                ⚠️ Il semble que tu ne sois pas sur iPhone en ce moment — ouvre ce lien depuis Safari sur ton iPhone pour suivre ces étapes.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -2389,6 +2465,7 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
   const [status, setStatus] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const [showHelp, setShowHelp] = useState(false);
   const appShareLink = location.origin + location.pathname;
 
   const fieldStyle = { width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
@@ -2397,9 +2474,16 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, minHeight: "62vh", maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Foyer</span>
+          <button
+            onClick={() => setShowHelp(true)}
+            title="Comment ça marche ?"
+            style={{ background: "#E1EED9", border: "none", borderRadius: "50%", width: 26, height: 26, color: "#3F8A4C", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}
+          >
+            ?
+          </button>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
@@ -2534,6 +2618,49 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
           </>
         )}
       </div>
+
+      {showHelp && (
+        <div
+          onClick={(e) => { e.stopPropagation(); setShowHelp(false); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+              <span style={{ fontSize: 17, fontWeight: 700 }}>👋 Comment ça marche</span>
+              <button onClick={() => setShowHelp(false)} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>🏠 Qu'est-ce qu'un foyer ?</div>
+                <p style={{ fontSize: 13.5, color: "#7A7968", margin: 0, lineHeight: 1.6 }}>
+                  Un foyer, c'est un groupe qui partage la même liste de courses, les mêmes recettes et les mêmes produits. Tout ce que fait un membre (ajouter un article, cocher un produit acheté...) est visible par les autres en temps réel.
+                </p>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>📱 "Partager l'application"</div>
+                <p style={{ fontSize: 13.5, color: "#7A7968", margin: 0, lineHeight: 1.6 }}>
+                  Pour faire découvrir l'appli à quelqu'un, sans l'ajouter à ton foyer. La personne pourra créer son propre compte et son propre foyer, complètement séparé du tien.
+                </p>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>🔑 "Inviter dans ton foyer"</div>
+                <p style={{ fontSize: 13.5, color: "#7A7968", margin: 0, lineHeight: 1.6 }}>
+                  Copie un code. La personne invitée doit d'abord se créer un compte (onglet "Nouvel utilisateur ?" à la connexion), puis coller ce code dans <b>Mes autres foyers → Rejoindre un foyer</b>. Elle voit alors la même liste que toi.
+                </p>
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>🔀 Plusieurs foyers</div>
+                <p style={{ fontSize: 13.5, color: "#7A7968", margin: 0, lineHeight: 1.6 }}>
+                  Tu peux appartenir à plusieurs foyers (ex : chez toi + chez tes parents) et passer de l'un à l'autre depuis <b>Mes autres foyers</b>. Un seul est actif à la fois.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
