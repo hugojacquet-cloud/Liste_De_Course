@@ -139,6 +139,7 @@ const CATEGORIES = [
   { key: "boissons", label: "Boissons", accent: "#3E93B0", tint: "#DDF0F5" },
   { key: "foyer_entretien", label: "Foyer & Entretien", accent: "#8B72C4", tint: "#EBE4FA" },
   { key: "soin_sante", label: "Soin & Santé", accent: "#3FA184", tint: "#DFF3EC" },
+  { key: "produits_bebe", label: "Produits bébé", accent: "#5FAFAE", tint: "#DFF3F2" },
   { key: "artisanat_jardin", label: "Artisanat & Jardin", accent: "#7C9142", tint: "#EAF0D9" },
   { key: "autre", label: "Autre", accent: "#9A9A88", tint: "#F0EEE4" },
 ];
@@ -365,6 +366,13 @@ const RAW_PRODUCTS = [
 
   // Ajouts récents (tickets de caisse)
   ["tomate_farcir","Tomate à farcir","🍅"],["legumes_couscous","Légumes couscous (conserve)","🥫"],["lotion_corps","Lotion corps 3-en-1","🧴"],
+
+  // produits_bebe
+  ["lait_infantile","Lait infantile","🍼"],["lait_croissance","Lait de croissance","🍼"],["couches_bebe","Couches","👶"],
+  ["lingettes_bebe","Lingettes bébé","🧻"],["creme_change","Crème de change","🧴"],["serum_physiologique","Sérum physiologique","💧"],
+  ["cotons_bebe","Cotons bébé","⚪"],["sac_couches","Sac à couches","👜"],["petits_pots_bebe","Petits pots bébé","🍲"],
+  ["biberon","Biberon","🍼"],["tetine","Tétine","🍼"],["gel_lavant_bebe","Gel lavant bébé","🧴"],
+  ["shampoing_bebe","Shampoing bébé","🧴"],["mouchoirs_bebe","Mouchoirs bébé","🤧"],
 ];
 
 
@@ -384,6 +392,7 @@ const BLOCK_SIZES = [
   ["fruits_legumes", 1],
   ["ingredients_epices", 1],
   ["soin_sante", 1],
+  ["produits_bebe", 14],
 ];
 
 
@@ -843,6 +852,8 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
   const [query, setQuery] = useState("");
   const [modalProduct, setModalProduct] = useState(null);
   const [editingIngId, setEditingIngId] = useState(null);
+  const [undoState, setUndoState] = useState(null); // { items: [...] } — ingrédients supprimés récemment, restaurables
+  const undoTimer = useRef(null);
 
   const addStep = () => {
     if (!stepInput.trim()) return;
@@ -883,12 +894,29 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
     setModalProduct(null);
     setEditingIngId(null);
   };
+  const showUndo = (items) => {
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoState({ items });
+    undoTimer.current = setTimeout(() => setUndoState(null), 4000);
+  };
+  const restoreUndo = () => {
+    if (!undoState) return;
+    setIngredients((l) => [...l, ...undoState.items]);
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    setUndoState(null);
+  };
   const remove = () => {
+    const removed = ingredients.find((it) => it.ingId === editingIngId);
     setIngredients((l) => l.filter((it) => it.ingId !== editingIngId));
     setModalProduct(null);
     setEditingIngId(null);
+    if (removed) showUndo([removed]);
   };
-  const removeIngredient = (ingId) => setIngredients((l) => l.filter((it) => it.ingId !== ingId));
+  const removeIngredient = (ingId) => {
+    const removed = ingredients.find((it) => it.ingId === ingId);
+    setIngredients((l) => l.filter((it) => it.ingId !== ingId));
+    if (removed) showUndo([removed]);
+  };
 
   return (
     <div>
@@ -1033,6 +1061,22 @@ function RecipeEditor({ draft, onCancel, onSave, products }) {
           onConfirm={confirm}
           onDelete={editingIngId ? remove : null}
         />
+      )}
+
+      {undoState && (
+        <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 18px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#FFFFFF", border: "1px solid #D8CFB0", borderRadius: 14, padding: "12px 16px", boxShadow: "0 12px 28px rgba(0,0,0,0.4)", maxWidth: 440, width: "100%" }}>
+            <span style={{ fontSize: 13.5, color: "#23262E", flex: 1 }}>
+              {undoState.items.length > 1 ? `${undoState.items.length} ingrédients supprimés` : "Ingrédient supprimé"}
+            </span>
+            <button
+              onClick={restoreUndo}
+              style={{ background: "none", border: "none", color: "#4E9D5B", fontWeight: 700, fontSize: 13.5, cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1712,7 +1756,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         src="./lemon-deco.png"
         alt=""
         aria-hidden="true"
-        style={{ position: "fixed", right: -40, bottom: -35, width: 150, opacity: 0.7, pointerEvents: "none", zIndex: -1 }}
+        style={{ position: "fixed", right: -60, bottom: -52, width: 225, opacity: 0.7, pointerEvents: "none", zIndex: -1 }}
       />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -1932,8 +1976,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                       style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: isCollapsed ? 0 : 12, cursor: "pointer", userSelect: "none" }}
                     >
                       <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-                      <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#23262E" }}>{cat.label}</h2>
-                      <span style={{ fontSize: 12, color: "#A8A695", fontWeight: 600 }}>{cat.products.length}</span>
+                      <h2 style={{ fontSize: 19, fontWeight: 700, margin: 0, color: "#23262E" }}>{cat.label}</h2>
+                      <span style={{ fontSize: 13, color: "#A8A695", fontWeight: 600 }}>{cat.products.length}</span>
                       <ChevronLeft
                         size={16}
                         color="#A8A695"
@@ -2474,7 +2518,7 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, minHeight: "62vh", maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, height: "78vh", maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
           <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Foyer</span>
           <button
