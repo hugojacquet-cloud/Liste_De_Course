@@ -2160,11 +2160,6 @@ function rowToData(row) {
   };
 }
 
-function getJoinCodeFromUrl() {
-  const m = location.hash.match(/foyer=([0-9a-fA-F-]+)/);
-  return m ? m[1] : "";
-}
-
 function getStoredHouseholdId() {
   try { return localStorage.getItem("courses_active_household_id"); } catch (e) { return null; }
 }
@@ -2174,19 +2169,18 @@ function setStoredHouseholdId(id) {
 
 // --- Écran de connexion -----------------------------------------------------
 
-function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode }) {
+function LoginScreen({ onLoginExisting, onLoginNew, loading, error }) {
   const [email, setEmail] = useState("");
   const [pseudo, setPseudo] = useState("");
-  const [code, setCode] = useState(initialCode || "");
   const [sent, setSent] = useState(false);
-  const [newUserMode, setNewUserMode] = useState(!!initialCode); // écran dédié ouvert d'office via un lien d'invitation
+  const [newUserMode, setNewUserMode] = useState(false);
 
   const inputStyle = { width: "100%", background: "#FFFFFF", border: "1px solid #ECE4D0", borderRadius: 12, color: "#23262E", fontSize: 15, padding: "13px 14px", outline: "none", fontFamily: "inherit", marginBottom: 14, boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginBottom: 6 };
 
   const submitExisting = async () => { await onLoginExisting({ email }); };
   const submitNew = async () => {
-    const ok = await onLoginNew({ email, pseudo, code });
+    const ok = await onLoginNew({ email, pseudo });
     if (ok) setSent(true);
   };
 
@@ -2227,7 +2221,7 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
             <div style={{ fontSize: 34, marginBottom: 8 }}>👋</div>
             <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 25, margin: 0 }}>Créer ton compte</h1>
             <p style={{ color: "#ADAB98", fontSize: 13.5, margin: "6px 0 0", lineHeight: 1.5 }}>
-              {code ? "Tu rejoins un foyer existant — indique juste ton email et ton pseudo." : "Un lien de connexion te sera envoyé par email, aucun mot de passe à créer."}
+              Un lien de connexion te sera envoyé par email, aucun mot de passe à créer.
             </p>
           </div>
 
@@ -2238,10 +2232,6 @@ function LoginScreen({ onLoginExisting, onLoginNew, loading, error, initialCode 
           <label style={labelStyle}>Mon pseudo est</label>
           <input style={inputStyle} type="text" value={pseudo} onChange={(e) => setPseudo(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submitNew(); }} placeholder="ex : Marie" />
-
-          <label style={labelStyle}>Code foyer (facultatif)</label>
-          <input style={inputStyle} type="text" value={code} onChange={(e) => setCode(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") submitNew(); }} placeholder="Colle ici un code reçu pour rejoindre un foyer" />
 
           {error && <p style={{ color: "#C4574A", fontSize: 13, margin: "-4px 0 14px" }}>{error}</p>}
 
@@ -2391,12 +2381,15 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
 
 // --- Modale "Mon foyer" ------------------------------------------------------
 
-function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseholdId, inviteLink, onClose, onRename, onSwitch, onCreate, onJoin, onDelete }) {
+function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseholdId, onClose, onRename, onSwitch, onCreate, onJoin, onDelete }) {
+  const [tab, setTab] = useState("actif"); // "actif" | "autres"
   const [nameInput, setNameInput] = useState(householdName || "");
   const [joinCode, setJoinCode] = useState("");
   const [newName, setNewName] = useState("");
   const [status, setStatus] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const appShareLink = location.origin + location.pathname;
 
   const fieldStyle = { width: "100%", background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 14, padding: "10px 12px", outline: "none", fontFamily: "inherit", boxSizing: "border-box" };
   const labelStyle = { fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" };
@@ -2406,100 +2399,139 @@ function FoyerModal({ householdName, profiles, myId, myHouseholds, currentHouseh
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 80 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", overflowY: "auto", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px", color: "#23262E" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-          <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Mon foyer</span>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>🏠 Foyer</span>
           <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <X size={15} />
           </button>
         </div>
 
-        <label style={labelStyle}>Nom du foyer actuel</label>
-        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 18 }}>
-          <input style={fieldStyle} value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
-          <button style={smallBtn} onClick={async () => { const ok = await onRename(nameInput.trim()); setStatus(ok ? "✓ Renommé" : "❌ Erreur"); }}>OK</button>
+        <div style={{ display: "flex", gap: 4, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 14, padding: 5, marginBottom: 22 }}>
+          <button
+            onClick={() => setTab("actif")}
+            style={{ flex: 1, padding: "10px 6px", borderRadius: 10, border: "none", background: tab === "actif" ? "#E1EED9" : "transparent", color: tab === "actif" ? "#3F8A4C" : "#9A9887", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+          >
+            Mon foyer actif
+          </button>
+          <button
+            onClick={() => setTab("autres")}
+            style={{ flex: 1, padding: "10px 6px", borderRadius: 10, border: "none", background: tab === "autres" ? "#E1EED9" : "transparent", color: tab === "autres" ? "#3F8A4C" : "#9A9887", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+          >
+            Mes autres foyers
+          </button>
         </div>
 
-        <label style={labelStyle}>Membres</label>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 20px" }}>
-          {profiles.length === 0 ? (
-            <p style={{ color: "#A8A695", fontSize: 13.5, margin: 0 }}>Personne d'autre pour l'instant.</p>
-          ) : profiles.map((p) => (
-            <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 12, padding: "10px 14px" }}>
-              <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#4E9D5B26", color: "#4E9D5B", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-                {(p.pseudo || "?").slice(0, 1).toUpperCase()}
-              </span>
-              <span style={{ fontSize: 14, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
-              {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#4E9D5B", fontWeight: 600 }}>Toi</span>}
-            </div>
-          ))}
-        </div>
-
-        <label style={labelStyle}>Inviter quelqu'un</label>
-        <p style={{ fontSize: 12.5, color: "#ADAB98", margin: "6px 0 8px" }}>Ce lien connecte directement la personne à ce foyer (elle doit avoir un compte).</p>
-        <button
-          onClick={() => { navigator.clipboard?.writeText(inviteLink); setStatus("🔗 Lien copié !"); }}
-          style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 20 }}
-        >
-          📋 Copier le lien d'invitation
-        </button>
-
-        {myHouseholds.length > 1 && (
+        {tab === "actif" && (
           <>
-            <label style={labelStyle}>Passer à un autre foyer</label>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 20px" }}>
-              {myHouseholds.map((h) => (
-                <button
-                  key={h.id}
-                  onClick={() => onSwitch(h.id)}
-                  disabled={h.id === currentHouseholdId}
-                  style={{ textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `1px solid ${h.id === currentHouseholdId ? "#4E9D5B" : "#ECE4D0"}`, background: h.id === currentHouseholdId ? "#4E9D5B26" : "transparent", color: h.id === currentHouseholdId ? "#4E9D5B" : "#23262E", fontWeight: 600, fontSize: 13.5, cursor: h.id === currentHouseholdId ? "default" : "pointer" }}
-                >
-                  {h.name} {h.id === currentHouseholdId ? " · actif" : ""}
-                </button>
+            <label style={labelStyle}>Nom du foyer actuel</label>
+            <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
+              <input style={fieldStyle} value={nameInput} onChange={(e) => setNameInput(e.target.value)} />
+              <button style={smallBtn} onClick={async () => { const ok = await onRename(nameInput.trim()); setStatus(ok ? "✓ Renommé" : "❌ Erreur"); }}>OK</button>
+            </div>
+
+            <label style={labelStyle}>Membres</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 22px" }}>
+              {profiles.length === 0 ? (
+                <p style={{ color: "#A8A695", fontSize: 13.5, margin: 0 }}>Personne d'autre pour l'instant.</p>
+              ) : profiles.map((p) => (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 12, padding: "10px 14px" }}>
+                  <span style={{ width: 30, height: 30, borderRadius: "50%", background: "#4E9D5B26", color: "#4E9D5B", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+                    {(p.pseudo || "?").slice(0, 1).toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{p.pseudo || "Sans pseudo"}</span>
+                  {p.id === myId && <span style={{ marginLeft: "auto", fontSize: 11.5, color: "#4E9D5B", fontWeight: 600 }}>Toi</span>}
+                </div>
               ))}
             </div>
+
+            <label style={labelStyle}>Partager</label>
+            <p style={{ fontSize: 12.5, color: "#ADAB98", margin: "6px 0 10px", lineHeight: 1.5 }}>
+              Deux façons différentes de partager, selon ce que tu veux faire :
+            </p>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(appShareLink); setStatus("🔗 Lien de l'appli copié !"); }}
+              style={{ width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 10, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 8 }}
+            >
+              📱 Partager l'application
+              <div style={{ fontSize: 11.5, color: "#ADAB98", fontWeight: 500, marginTop: 2 }}>Pour découvrir l'appli, sans rejoindre ce foyer</div>
+            </button>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(currentHouseholdId); setStatus("🔑 Code du foyer copié !"); }}
+              style={{ width: "100%", textAlign: "left", padding: "12px 14px", borderRadius: 10, border: "1px solid #4E9D5B55", background: "#E1EED9", color: "#3F8A4C", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginBottom: 20 }}
+            >
+              🔑 Inviter dans ton foyer
+              <div style={{ fontSize: 11.5, color: "#3F8A4C", fontWeight: 500, marginTop: 2, opacity: 0.85 }}>Copie le code à coller dans "Mes autres foyers" chez ton invité</div>
+            </button>
+
+            {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") || status.startsWith("🔑") ? "#4E9D5B" : "#C4574A", marginBottom: 16 }}>{status}</p>}
+
+            <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "6px 0 16px" }} />
+            <label style={{ ...labelStyle, color: "#C4574A" }}>Zone dangereuse</label>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 10 }}
+              >
+                🗑️ Supprimer ce foyer
+              </button>
+            ) : (
+              <div style={{ marginTop: 10, background: "#FBE5E1", border: "1px solid #C4574A55", borderRadius: 10, padding: 14 }}>
+                <p style={{ fontSize: 12.5, color: "#23262E", margin: "0 0 12px", lineHeight: 1.5 }}>
+                  Supprimer "{householdName}" effacera la liste, les recettes et l'accès pour tous ses membres, définitivement. Continuer ?
+                </p>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Annuler</button>
+                  <button
+                    onClick={async () => { const ok = await onDelete(); if (!ok) { setStatus("❌ Erreur"); setConfirmDelete(false); } }}
+                    style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                  >
+                    Oui, supprimer
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
 
-        <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "0 0 18px" }} />
+        {tab === "autres" && (
+          <>
+            {myHouseholds.length > 1 ? (
+              <>
+                <label style={labelStyle}>Passer à un autre foyer</label>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, margin: "8px 0 22px" }}>
+                  {myHouseholds.map((h) => (
+                    <button
+                      key={h.id}
+                      onClick={() => onSwitch(h.id)}
+                      disabled={h.id === currentHouseholdId}
+                      style={{ textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `1px solid ${h.id === currentHouseholdId ? "#4E9D5B" : "#ECE4D0"}`, background: h.id === currentHouseholdId ? "#4E9D5B26" : "transparent", color: h.id === currentHouseholdId ? "#4E9D5B" : "#23262E", fontWeight: 600, fontSize: 13.5, cursor: h.id === currentHouseholdId ? "default" : "pointer" }}
+                    >
+                      {h.name} {h.id === currentHouseholdId ? " · actif" : ""}
+                    </button>
+                  ))}
+                </div>
+                <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "0 0 20px" }} />
+              </>
+            ) : (
+              <p style={{ color: "#ADAB98", fontSize: 13.5, margin: "0 0 22px", lineHeight: 1.5 }}>
+                Tu n'as qu'un seul foyer pour l'instant. Rejoins-en un avec un code, ou crée-en un nouveau ci-dessous.
+              </p>
+            )}
 
-        <label style={labelStyle}>Rejoindre un autre foyer</label>
-        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
-          <input style={fieldStyle} value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Code du foyer" />
-          <button style={smallBtn} onClick={async () => { const ok = await onJoin(joinCode.trim()); setStatus(ok ? "✓ Foyer rejoint" : "❌ Code invalide"); if (ok) setJoinCode(""); }}>Rejoindre</button>
-        </div>
-
-        <label style={labelStyle}>Créer un nouveau foyer indépendant</label>
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <input style={fieldStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nom du nouveau foyer" />
-          <button style={smallBtn} onClick={async () => { const ok = await onCreate(newName.trim()); setStatus(ok ? "✓ Foyer créé" : "❌ Erreur"); if (ok) setNewName(""); }}>Créer</button>
-        </div>
-
-        {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") || status.startsWith("🔗") ? "#4E9D5B" : "#C4574A", marginTop: 16 }}>{status}</p>}
-
-        <hr style={{ border: "none", borderTop: "1px solid #ECE4D0", margin: "22px 0 16px" }} />
-        <label style={{ ...labelStyle, color: "#C4574A" }}>Zone dangereuse</label>
-        {!confirmDelete ? (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            style={{ width: "100%", padding: "12px", borderRadius: 10, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 13.5, cursor: "pointer", marginTop: 10 }}
-          >
-            🗑️ Supprimer ce foyer
-          </button>
-        ) : (
-          <div style={{ marginTop: 10, background: "#FBE5E1", border: "1px solid #C4574A55", borderRadius: 10, padding: 14 }}>
-            <p style={{ fontSize: 12.5, color: "#23262E", margin: "0 0 12px", lineHeight: 1.5 }}>
-              Supprimer "{householdName}" effacera la liste, les recettes et l'accès pour tous ses membres, définitivement. Continuer ?
-            </p>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}>Annuler</button>
-              <button
-                onClick={async () => { const ok = await onDelete(); if (!ok) { setStatus("❌ Erreur"); setConfirmDelete(false); } }}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
-              >
-                Oui, supprimer
-              </button>
+            <label style={labelStyle}>Rejoindre un foyer</label>
+            <p style={{ fontSize: 12.5, color: "#ADAB98", margin: "6px 0 8px" }}>Colle le code que quelqu'un t'a partagé.</p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              <input style={fieldStyle} value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Code du foyer" />
+              <button style={smallBtn} onClick={async () => { const ok = await onJoin(joinCode.trim()); setStatus(ok ? "✓ Foyer rejoint" : "❌ Code invalide"); if (ok) setJoinCode(""); }}>Rejoindre</button>
             </div>
-          </div>
+
+            <label style={labelStyle}>Créer un nouveau foyer indépendant</label>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <input style={fieldStyle} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Nom du nouveau foyer" />
+              <button style={smallBtn} onClick={async () => { const ok = await onCreate(newName.trim()); setStatus(ok ? "✓ Foyer créé" : "❌ Erreur"); if (ok) setNewName(""); }}>Créer</button>
+            </div>
+
+            {status && <p style={{ fontSize: 12.5, color: status.startsWith("✓") ? "#4E9D5B" : "#C4574A", marginTop: 16 }}>{status}</p>}
+          </>
         )}
       </div>
     </div>
@@ -2513,7 +2545,6 @@ function Root() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [householdError, setHouseholdError] = useState("");
-  const [pendingJoinCode, setPendingJoinCode] = useState(() => getJoinCodeFromUrl());
   const [myHouseholds, setMyHouseholds] = useState([]);
   const [currentHouseholdId, setCurrentHouseholdId] = useState(null);
   const [householdsReady, setHouseholdsReady] = useState(false);
@@ -2565,17 +2596,6 @@ function Root() {
     let cancelled = false;
     (async () => {
       const uid = session.user.id;
-      let joinedId = null;
-      let storedCode = null;
-      try { storedCode = localStorage.getItem("courses_pending_code"); } catch (e) {}
-      const codeToUse = pendingJoinCode || storedCode;
-      if (codeToUse) {
-        const ok = await joinHousehold(uid, codeToUse);
-        if (ok) joinedId = codeToUse;
-        history.replaceState(null, "", location.pathname);
-        setPendingJoinCode("");
-        try { localStorage.removeItem("courses_pending_code"); } catch (e) {}
-      }
       const households = await loadMyHouseholds(uid);
       if (cancelled) return;
       if (!households.length) {
@@ -2583,7 +2603,7 @@ function Root() {
         setHouseholdsReady(true);
         return;
       }
-      const stored = joinedId || getStoredHouseholdId();
+      const stored = getStoredHouseholdId();
       const match = households.find((h) => h.id === stored);
       const active = match ? match.id : households[0].id;
       setStoredHouseholdId(active);
@@ -2666,15 +2686,14 @@ function Root() {
 
   const GENERIC_PASSWORD = "123456"; // mot de passe interne unique à tous les comptes — évite de renvoyer un email à chaque connexion
 
-  const handleLoginNew = async ({ email, pseudo: typedPseudo, code }) => {
+  const handleLoginNew = async ({ email, pseudo: typedPseudo }) => {
     setLoginLoading(true);
     setLoginError("");
-    // Le pseudo et le code foyer sont tapés maintenant, mais ne serviront qu'après que
-    // la personne ait cliqué le lien reçu par email (nouvelle page, nouvel état JS) —
-    // on les garde donc de côté le temps de cet aller-retour.
+    // Le pseudo est tapé maintenant, mais ne servira qu'après que la personne ait cliqué
+    // le lien reçu par email (nouvelle page, nouvel état JS) — on le garde de côté le temps
+    // de cet aller-retour.
     try {
       if (typedPseudo && typedPseudo.trim()) localStorage.setItem("courses_pending_pseudo", typedPseudo.trim());
-      if (code && code.trim()) localStorage.setItem("courses_pending_code", code.trim());
     } catch (e) {}
     const { error } = await sb.auth.signInWithOtp({
       email,
@@ -2817,7 +2836,7 @@ function Root() {
     return <div style={{ background: "#FBF7EA", minHeight: "100vh" }} />;
   }
   if (session === null) {
-    return <LoginScreen onLoginExisting={handleLoginExisting} onLoginNew={handleLoginNew} loading={loginLoading} error={loginError} initialCode={pendingJoinCode} />;
+    return <LoginScreen onLoginExisting={handleLoginExisting} onLoginNew={handleLoginNew} loading={loginLoading} error={loginError} />;
   }
   if (!householdsReady) {
     return <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#ADAB98", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
@@ -2830,7 +2849,6 @@ function Root() {
   }
 
   const currentHousehold = myHouseholds.find((h) => h.id === currentHouseholdId);
-  const inviteLink = location.origin + location.pathname + "#foyer=" + currentHouseholdId;
 
   return (
     <div style={{ background: "#FBF7EA", minHeight: "100vh", color: "#23262E", position: "relative", zIndex: 0 }}>
@@ -2869,7 +2887,6 @@ function Root() {
           myId={session.user.id}
           myHouseholds={myHouseholds}
           currentHouseholdId={currentHouseholdId}
-          inviteLink={inviteLink}
           onClose={() => setShowFoyer(false)}
           onRename={handleRenameHousehold}
           onSwitch={handleSwitchHousehold}
