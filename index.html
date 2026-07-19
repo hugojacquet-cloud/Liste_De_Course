@@ -194,7 +194,7 @@ const RAW_PRODUCTS = [
   ["sauge","Sauge","🌿"],["thym","Thym","🌿"],["tomates_cerises","Tomates cerises","🍅"],
   ["tomates_sechees","Tomates séchées","🍅"],
   // pain_patisserie
-  ["pain","Pain","🍞"],["baguette","Baguette","🥖"],["pain_mie","Pain de mie","🍞"],
+  ["pain","Pain","🍞",[{id:"v-pain-bagconstance",name:"Bag Constance"}]],["baguette","Baguette","🥖"],["pain_mie","Pain de mie","🍞"],
   ["croissant","Croissant","🥐"],["pain_choco","Pain au chocolat","🥐"],["brioche","Brioche","🍞"],
   ["biscotte","Biscottes","🍪"],["pain_complet","Pain complet","🍞"],["tarte","Tarte","🥧"],
   ["gateau","Gâteau","🍰"],["cookies","Cookies","🍪"],["viennoiserie","Viennoiserie","🥐"],
@@ -230,7 +230,7 @@ const RAW_PRODUCTS = [
   ["confit_canard","Confit de canard","🍗"],["cuisse_poulet","Cuisses de poulet","🍗"],["emince_boeuf","Émincé de bœuf","🥩"],
   ["escalope","Escalope","🍗"],["faux_filet","Faux filet","🥩"],["filet_mignon","Filet mignon","🥩"],
   ["hamburger","Hamburger","🍔"],["harengs","Harengs","🐟"],["homard","Homard","🦞"],
-  ["jambon_blanc","Jambon blanc","🍖"],["jambon_cru","Jambon cru","🍖"],["jambon_poulet","Jambon de poulet","🍗"],
+  ["jambon_blanc","Jambon blanc","🍖"],["jambon_cru","Jambon cru","🍖",[{id:"v-jambon_cru-chiffonnade",name:"Chiffonnade jbn"}]],["jambon_poulet","Jambon de poulet","🍗",[{id:"v-jambon_poulet-blcplt",name:"Blc Plt"}]],
   ["knackis","Knacki","🌭"],["lard","Lard","🥓"],["magret_canard","Magret de canard","🦆"],
   ["maquereaux","Maquereaux","🐟"],["merlan","Merlan","🐟"],["moules","Moules","🦪"],
   ["poisson","Poisson","🐟"],["poitrine_porc","Poitrine de porc","🥓"],["porc","Porc","🥩"],
@@ -249,7 +249,7 @@ const RAW_PRODUCTS = [
   ["amarante","Amarante","🌾"],["anchois","Anchois","🐟"],["anis","Anis","🌿"],
   ["babeurre","Babeurre","🥛"],["bearnaise","Sauce béarnaise","🫙"],["beurre_cacahuete","Beurre de cacahuète","🥜"],
   ["bouillon","Bouillon","🍲"],["bouillon_legumes","Bouillon de légumes","🍲"],["bouillon_volaille","Bouillon de volaille","🍲"],
-  ["capres","Câpres","🫒"],["colorant","Colorant alimentaire","🎨"],["compote_pommes","Compote de pommes","🍎"],
+  ["capres","Câpres","🫒"],["colorant","Colorant alimentaire","🎨"],["compote_pommes","Compote de pommes","🍎",[{id:"v-compote_pommes-dessfrtpom",name:"Dess. Frt Pom"}]],
   ["concentre_tomates","Concentré de tomates","🍅"],["cornichon","Cornichons","🥒"],["coulis","Coulis","🍓"],
   ["curcuma","Curcuma","🟡"],["curry_vert","Pâte de curry vert","🟢"],["eau_coco","Eau de coco","🥥"],
   ["epices_viande","Épices pour viande","🧂"],["extrait_amande","Extrait d'amande","🫙"],["extrait_rhum","Extrait de rhum","🫙"],
@@ -280,7 +280,7 @@ const RAW_PRODUCTS = [
   ["croquettes","Croquettes","🥔"],["paella","Paella","🥘"],["patates_surgelees","Patates surgelées","🍟"],
   ["soupe","Soupe","🍲"],
   // pates_riz_cereales
-  ["pates","Pâtes","🍝"],["riz","Riz","🍚"],["farine","Farine","🌾"],
+  ["pates","Pâtes","🍝",[{id:"v-pates-serpentini",name:"Serpentini"}]],["riz","Riz","🍚"],["farine","Farine","🌾"],
   ["cereales","Céréales","🥣"],["semoule","Semoule","🌾"],["quinoa","Quinoa","🌾"],
   ["boulgour","Boulgour","🌾"],["spaghetti","Spaghetti","🍝"],["lentilles","Lentilles","🫘"],
   ["pois_chiches","Pois chiches","🫘"],["flocons_avoine","Flocons d'avoine","🌾"],["couscous","Couscous","🌾"],
@@ -298,7 +298,7 @@ const RAW_PRODUCTS = [
   ["biscuits","Biscuits","🍪"],["barres_cereales","Barres de céréales","🍫"],["popcorn","Popcorn","🍿"],
   ["cacahuetes","Cacahuètes","🥜"],["gateaux_apero","Gâteaux apéritifs","🍘"],["pate_tartiner","Pâte à tartiner","🍫"],
   ["fruits_secs","Fruits secs","🥜"],["barre_chocolatee","Barre chocolatée","🍫"],["biscuits_noel","Biscuits de Noël","🍪"],
-  ["chewing_gum","Chewing-gum","🍬"],["compotes","Compotes","🍎"],["confiture","Confiture","🍯"],
+  ["chewing_gum","Chewing-gum","🍬"],["compotes","Compotes","🍎"],["confiture","Confiture","🍯",[{id:"v-confiture-mirabelle",name:"Conf. mirabelle"}]],
   ["creme_nougat","Crème de nougat","🍫"],["grissini","Grissini","🥖"],["madeleine","Madeleines","🧁"],
   ["miel","Miel","🍯"],["pain_epice","Pain d'épices","🍞"],["panettone","Panettone","🍞"],
   ["pommes_chips","Chips de pommes","🍎"],["pudding","Pudding","🍮"],["snacks","Snacks","🍿"],
@@ -373,6 +373,9 @@ const RAW_PRODUCTS = [
   ["cotons_bebe","Cotons bébé","⚪"],["sac_couches","Sac à couches","👜"],["petits_pots_bebe","Petits pots bébé","🍲"],
   ["biberon","Biberon","🍼"],["tetine","Tétine","🍼"],["gel_lavant_bebe","Gel lavant bébé","🧴"],
   ["shampoing_bebe","Shampoing bébé","🧴"],["mouchoirs_bebe","Mouchoirs bébé","🤧"],
+
+  // Ajouts récents (ticket 19/07/2026)
+  ["steak_vegetal","Steak végétal","🌱"],["carottes_rapees","Carottes râpées","🥕"],["fromage_tranche","Fromage en tranches","🧀"],["pain_seigle","Pain de seigle","🍞"],
 ];
 
 
@@ -393,6 +396,10 @@ const BLOCK_SIZES = [
   ["ingredients_epices", 1],
   ["soin_sante", 1],
   ["produits_bebe", 14],
+  ["viande_poisson", 1],
+  ["fruits_legumes", 1],
+  ["produits_laitiers", 1],
+  ["pain_patisserie", 1],
 ];
 
 
@@ -402,7 +409,7 @@ const PRODUCTS = (() => {
   BLOCK_SIZES.forEach(([cat, count]) => {
     for (let i = 0; i < count; i++) {
       const raw = RAW_PRODUCTS[idx];
-      if (raw) out.push({ id: raw[0], name: raw[1], icon: raw[2], cat });
+      if (raw) out.push({ id: raw[0], name: raw[1], icon: raw[2], cat, variants: raw[3] ?? [] });
       idx++;
     }
   });
@@ -481,9 +488,18 @@ function estimateItemPrice(item, product) {
     return Number.isNaN(p) ? null : item.qty * p;
   }
   if (item.unit === "paquet") {
-    if (product.priceUnit == null || product.priceUnit === "") return null;
-    const p = Number(product.priceUnit);
-    return Number.isNaN(p) ? null : item.qty * p;
+    if (product.priceUnit != null && product.priceUnit !== "") {
+      const p = Number(product.priceUnit);
+      return Number.isNaN(p) ? null : item.qty * p;
+    }
+    // Pas de prix à l'unité connu : si un poids par article et un prix au kg sont renseignés,
+    // on estime le prix à partir de ces deux valeurs (ex : tomate à 5 €/kg, article de 100 g → 0,50 €/article).
+    if (product.priceKg != null && product.priceKg !== "" && product.weight != null && product.weight !== "") {
+      const pk = Number(product.priceKg);
+      const w = Number(product.weight);
+      if (!Number.isNaN(pk) && !Number.isNaN(w) && w > 0) return item.qty * pk * (w / 1000);
+    }
+    return null;
   }
   return null;
 }
@@ -766,6 +782,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
   const [priceUnit, setPriceUnit] = useState(product?.priceUnit != null ? String(product.priceUnit).replace(".", ",") : "");
   const [priceKg, setPriceKg] = useState(product?.priceKg != null ? String(product.priceKg).replace(".", ",") : "");
+  const [weight, setWeight] = useState(product?.weight != null ? String(product.weight).replace(".", ",") : "");
   const [variants, setVariants] = useState(product?.variants ?? []);
   const [variantsOpen, setVariantsOpen] = useState(false);
   const c = catInfo(cat) || CATEGORIES[0];
@@ -900,6 +917,22 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           </div>
         </div>
 
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Poids de l'article (facultatif)</label>
+        <div style={{ position: "relative", margin: "8px 0 6px" }}>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value.replace(/[^0-9,.]/g, ""))}
+            placeholder="ex : 100"
+            style={{ width: "100%", background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 32px 11px 12px", outline: "none", fontFamily: "inherit" }}
+          />
+          <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", color: "#ADAB98", fontSize: 14 }}>g</span>
+        </div>
+        <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "0 0 22px", lineHeight: 1.4 }}>
+          Utile si l'article est vendu au kg mais ajouté à la liste à l'unité (ex : tomate à 5,00 €/kg, article de 100 g → un article ≈ 0,50 €). Laisse vide si non concerné.
+        </p>
+
         <div style={{ border: "1px solid var(--color-primary-border)", borderRadius: 10, marginBottom: 22, overflow: "hidden" }}>
           <button
             onClick={() => setVariantsOpen((o) => !o)}
@@ -951,12 +984,14 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
             onClick={() => {
               const nUnit = priceUnit.trim().replace(",", ".");
               const nKg = priceKg.trim().replace(",", ".");
+              const nWeight = weight.trim().replace(",", ".");
               onSave({
                 name: name.trim(),
                 icon,
                 cat,
                 priceUnit: nUnit ? Number(nUnit) : null,
                 priceKg: nKg ? Number(nKg) : null,
+                weight: nWeight ? Number(nWeight) : null,
                 variants: variants.map((v) => ({ id: v.id, name: v.name.trim() })).filter((v) => v.name),
               });
             }}
@@ -2040,8 +2075,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
-  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
-    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null, variants: variants ?? [] };
+  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg, weight, variants }) => {
+    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null, weight: weight ?? null, variants: variants ?? [] };
     setCustomProducts((l) => [...l, p]);
     return p;
   };
@@ -2090,9 +2125,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
   const deleteCustomIcon = (dataUrl) => setCustomIcons((list) => list.filter((i) => i !== dataUrl));
 
-  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, variants }) => {
-    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, variants });
-    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, variants });
+  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, weight, variants }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, weight, variants });
+    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, weight, variants });
     closeProductModal();
   };
   const deleteFromProductModal = () => {
