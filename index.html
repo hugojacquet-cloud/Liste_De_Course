@@ -1509,47 +1509,7 @@ function AddRecipeToListModal({ recipe, products, onClose, onConfirmSelection, o
 
 // --- Sélecteur / gestion des listes (multi-listes au sein du foyer) --------
 
-// --- Réorganisation des rayons (impacte "Tous les produits" ET "Ma liste") --
-
-function CategoryOrderModal({ orderedKeys, onClose, onMove }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid var(--color-primary-border)", borderRadius: "20px 20px 0 0" }}
-      >
-        <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontSize: 17, fontWeight: 700 }}>Ordre des rayons</div>
-            <div style={{ fontSize: 12.5, color: "#9A9887", marginTop: 2 }}>S'applique à "Tous les produits" et à "Ma liste"</div>
-          </div>
-          <button onClick={onClose} style={{ background: "var(--color-primary-border)", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <X size={15} />
-          </button>
-        </div>
-
-        <div style={{ overflowY: "auto", padding: "14px 20px 20px" }}>
-          {orderedKeys.map((cat, idx) => (
-            <div
-              key={cat.key}
-              style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginBottom: 8, borderRadius: 12, border: "1px solid var(--color-primary-border)", background: cat.tint }}
-            >
-              <span style={{ width: 9, height: 9, borderRadius: "50%", background: cat.accent, flexShrink: 0 }} />
-              <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: "#23262E" }}>{cat.label}</span>
-              <button onClick={() => onMove(cat.key, "up")} disabled={idx === 0} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--color-primary-border)", background: "#FFFFFF", color: idx === 0 ? "#D8CFB0" : "#23262E", cursor: idx === 0 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>▲</button>
-              <button onClick={() => onMove(cat.key, "down")} disabled={idx === orderedKeys.length - 1} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--color-primary-border)", background: "#FFFFFF", color: idx === orderedKeys.length - 1 ? "#D8CFB0" : "#23262E", cursor: idx === orderedKeys.length - 1 ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>▼</button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
+function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, onRename, onDelete, itemCounts }) {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [renamingId, setRenamingId] = useState(null);
@@ -1969,25 +1929,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [productOverrides, setProductOverrides] = useState(() => initialData?.productOverrides ?? {}); // { [id]: {name, icon, cat, priceUnit, priceKg} } pour les articles de base modifiés
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
   const [customIcons, setCustomIcons] = useState(() => initialData?.customIcons ?? []); // icônes/emoji perso importés (data URLs)
-  // Ordre des rayons dans "Tous les produits" (et donc dans "Ma liste") — personnalisable, partagé avec le foyer.
-  const [categoryOrder, setCategoryOrder] = useState(() => {
-    const stored = initialData?.categoryOrder ?? [];
-    const known = new Set(CATEGORIES.map((c) => c.key));
-    const filtered = stored.filter((k) => known.has(k));
-    const missing = CATEGORIES.map((c) => c.key).filter((k) => !filtered.includes(k));
-    return [...filtered, ...missing];
-  });
-  const [showCategoryOrder, setShowCategoryOrder] = useState(false);
-  const moveCategory = (key, dir) => {
-    setCategoryOrder((order) => {
-      const arr = [...order];
-      const idx = arr.indexOf(key);
-      const target = dir === "up" ? idx - 1 : idx + 1;
-      if (idx === -1 || target < 0 || target >= arr.length) return arr;
-      [arr[idx], arr[target]] = [arr[target], arr[idx]];
-      return arr;
-    });
-  };
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
   const [loyaltyCards, setLoyaltyCards] = useState(() => initialData?.loyaltyCards ?? []); // cartes de fidélité { id, name, code, color }
   const [showCardsManager, setShowCardsManager] = useState(false);
@@ -2054,8 +1995,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const skipNextPush = useRef(false);
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
-    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards, categoryOrder });
-  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards, categoryOrder]);
+    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards });
+  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards]);
 
   // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
   useEffect(() => {
@@ -2071,12 +2012,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setLoyaltyCards(remoteData.loyaltyCards ?? []);
     setLists(remoteData.lists?.length ? remoteData.lists : [{ id: "default", name: "Ma liste" }]);
     setActiveListId(remoteData.activeListId ?? remoteData.lists?.[0]?.id ?? "default");
-    const knownKeys = new Set(CATEGORIES.map((c) => c.key));
-    const storedOrder = (remoteData.categoryOrder ?? []).filter((k) => knownKeys.has(k));
-    const missingKeys = CATEGORIES.map((c) => c.key).filter((k) => !storedOrder.includes(k));
-    setCategoryOrder([...storedOrder, ...missingKeys]);
   }, [remoteVersion]);
-
 
   const toggleCatCollapsed = (key) => setCollapsedCats((c) => ({ ...c, [key]: !c[key] }));
 
@@ -2265,13 +2201,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     () => list.filter((it) => (it.group || lists[0]?.id) === activeListId),
     [list, lists, activeListId]
   );
-  const orderedCategoryKeys = useMemo(() => {
-    const known = new Set(CATEGORIES.map((c) => c.key));
-    const filtered = categoryOrder.filter((k) => known.has(k));
-    const missing = CATEGORIES.map((c) => c.key).filter((k) => !filtered.includes(k));
-    return [...filtered, ...missing];
-  }, [categoryOrder]);
-
   const grouped = useMemo(() => {
     const map = {};
     visibleList.forEach((item) => {
@@ -2281,8 +2210,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       if (!map[p.cat]) map[p.cat] = [];
       map[p.cat].push({ item, product: p });
     });
-    return orderedCategoryKeys.map((k) => catInfo(k)).filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
-  }, [visibleList, products, orderedCategoryKeys]);
+    return CATEGORIES.filter((c) => map[c.key]).map((c) => ({ ...c, entries: map[c.key] }));
+  }, [visibleList, products]);
   const boughtItems = useMemo(() => {
     return visibleList
       .filter((item) => item.bought)
@@ -2292,11 +2221,11 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   }, [visibleList, products]);
 
   const allGrouped = useMemo(
-    () => orderedCategoryKeys.map((k) => catInfo(k)).map((c) => ({
+    () => CATEGORIES.map((c) => ({
       ...c,
       products: products.filter((p) => p.cat === c.key).slice().sort((a, b) => a.name.localeCompare(b.name, "fr", { sensitivity: "base" })),
     })),
-    [products, orderedCategoryKeys]
+    [products]
   );
   const catalogFiltered = useMemo(() => {
     const q = normalize(catalogQuery.trim());
@@ -2605,13 +2534,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               >
                 <Plus size={16} /> Nouvel article
               </button>
-              <button
-                onClick={() => setShowCategoryOrder(true)}
-                title="Réorganiser les rayons"
-                style={{ padding: "13px 14px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                ↕️
-              </button>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)", marginBottom: 20 }}>
@@ -2811,14 +2733,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         />
       )}
 
-      {showCategoryOrder && (
-        <CategoryOrderModal
-          orderedKeys={orderedCategoryKeys.map((k) => catInfo(k))}
-          onClose={() => setShowCategoryOrder(false)}
-          onMove={moveCategory}
-        />
-      )}
-
       {showCardsManager && (
         <CardsManagerModal
           cards={loyaltyCards}
@@ -2985,7 +2899,6 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const emptyData = {
   list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [],
   customIcons: [], lists: [{ id: "default", name: "Ma liste" }], activeListId: "default", loyaltyCards: [],
-  categoryOrder: [],
 };
 
 function rowToData(row) {
@@ -3000,7 +2913,6 @@ function rowToData(row) {
     lists: row.lists?.length ? row.lists : [{ id: "default", name: "Ma liste" }],
     activeListId: row.active_list_id ?? (row.lists?.[0]?.id ?? "default"),
     loyaltyCards: row.loyalty_cards ?? [],
-    categoryOrder: row.category_order ?? [],
   };
 }
 
@@ -3700,7 +3612,6 @@ function Root() {
       lists: data.lists,
       active_list_id: data.activeListId,
       loyalty_cards: data.loyaltyCards,
-      category_order: data.categoryOrder,
       updated_at: new Date().toISOString(),
       updated_by: userId,
     }, { onConflict: "household_id" });
