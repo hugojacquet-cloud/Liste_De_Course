@@ -518,9 +518,34 @@ function encodeEAN8(digits8) {
   return bin;
 }
 
-// Normalise n'importe quelle suite de chiffres entrée à la main en un code-barres EAN-13 ou EAN-8
-// valide et affichable : complète la clé de contrôle si elle manque, ou recadre sur 13 chiffres
-// pour les longueurs non standard.
+// Table standard "entrelacé 2 parmi 5" (ITF) — chaque chiffre est un motif de 5 éléments
+// étroits (N) ou larges (W). Utilisée pour les codes numériques de longueur non standard
+// (ni 7/8, ni 12/13 chiffres), très courante sur les cartes de fidélité type Intermarché.
+// Contrairement à l'EAN, l'ITF s'étend naturellement à n'importe quelle longueur (par paires
+// de chiffres), donc aucun chiffre n'est jamais tronqué.
+const ITF_PATTERNS = { "0": "NNWWN", "1": "WNNNW", "2": "NWNNW", "3": "WWNNN", "4": "NNWNW", "5": "WNWNN", "6": "NWWNN", "7": "NNNWW", "8": "WNNWN", "9": "NWNWN" };
+function encodeITF(digitsStr) {
+  let d = digitsStr;
+  if (d.length % 2 === 1) d = "0" + d; // l'ITF encode par paires de chiffres
+  const N = 1, W = 3;
+  let bin = "";
+  const push = (width, isBar) => { bin += (isBar ? "1" : "0").repeat(width); };
+  push(N, true); push(N, false); push(N, true); push(N, false); // motif de départ
+  for (let i = 0; i < d.length; i += 2) {
+    const barDigits = ITF_PATTERNS[d[i]];
+    const spaceDigits = ITF_PATTERNS[d[i + 1]];
+    for (let j = 0; j < 5; j++) {
+      push(barDigits[j] === "W" ? W : N, true);
+      push(spaceDigits[j] === "W" ? W : N, false);
+    }
+  }
+  push(W, true); push(N, false); push(N, true); // motif de fin
+  return bin;
+}
+
+// Normalise n'importe quelle suite de chiffres entrée à la main en un code-barres affichable :
+// EAN-8/EAN-13 pour les longueurs standard (avec calcul automatique de la clé de contrôle),
+// et ITF pour toute autre longueur — sans jamais tronquer le code, quelle que soit sa taille.
 function normalizeBarcode(raw) {
   let digits = String(raw || "").replace(/\D/g, "");
   if (!digits) return null;
@@ -528,8 +553,7 @@ function normalizeBarcode(raw) {
   if (digits.length === 8) return { digits, bin: encodeEAN8(digits) };
   if (digits.length === 12) digits += String(ean13CheckDigit(digits));
   if (digits.length === 13) return { digits, bin: encodeEAN13(digits) };
-  digits = digits.slice(-13).padStart(13, "0");
-  return { digits, bin: encodeEAN13(digits) };
+  return { digits, bin: encodeITF(digits) };
 }
 
 // Rendu SVG du code-barres à partir de la chaîne de modules binaires (barres = "1", blancs = "0")
@@ -1542,14 +1566,14 @@ function CardsManagerModal({ cards, onClose, onEditCard, onAddCard, onDeleteCard
             <p style={{ color: "#A8A695", fontSize: 13.5, margin: "6px 0 16px" }}>Aucune carte pour l'instant.</p>
           )}
           {cards.map((c) => (
-            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", marginBottom: 8, borderRadius: 12, border: "1px solid #ECE4D0" }}>
-              <span style={{ width: 14, height: 14, borderRadius: 4, background: c.color, flexShrink: 0 }} />
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "20px 16px", marginBottom: 10, borderRadius: 14, border: "1px solid #ECE4D0", minHeight: 108 }}>
+              <span style={{ width: 22, height: 22, borderRadius: 6, background: c.color, flexShrink: 0 }} />
               <button onClick={() => onEditCard(c)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#23262E" }}>{c.name}</div>
-                <div style={{ fontSize: 11.5, color: "#9A9887", marginTop: 2 }}>•••• {c.code.slice(-4)}</div>
+                <div style={{ fontSize: 16.5, fontWeight: 600, color: "#23262E" }}>{c.name}</div>
+                <div style={{ fontSize: 13, color: "#9A9887", marginTop: 4 }}>•••• {c.code.slice(-4)}</div>
               </button>
-              <button onClick={() => setConfirmDeleteId(c.id)} title="Supprimer cette carte" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <X size={13} />
+              <button onClick={() => setConfirmDeleteId(c.id)} title="Supprimer cette carte" style={{ width: 34, height: 34, borderRadius: 9, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <X size={15} />
               </button>
             </div>
           ))}
