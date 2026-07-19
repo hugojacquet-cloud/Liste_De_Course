@@ -476,6 +476,77 @@ function estimateRecipeTotal(ingredients, products) {
 
 // --- Modal quantité / note --------------------------------------------------
 
+// --- Cartes de fidélité (codes-barres) --------------------------------------
+
+// Palette de couleurs attribuée aux cartes dans l'ordre de création (façon carte de magasin)
+const CARD_COLORS = ["#5B9BD5", "#4E9D5B", "#D9614F", "#C98A3D", "#8B72C4", "#3E93B0", "#D45E85", "#3FA184"];
+
+// Tables standard EAN-13 / EAN-8 (norme GS1) — permettent de reconstruire un vrai code-barres
+// scannable à partir des chiffres imprimés sous le code-barres.
+const EAN_L = { "0": "0001101", "1": "0011001", "2": "0010011", "3": "0111101", "4": "0100011", "5": "0110001", "6": "0101111", "7": "0111011", "8": "0110111", "9": "0001011" };
+const EAN_G = { "0": "0100111", "1": "0110011", "2": "0011011", "3": "0100001", "4": "0011101", "5": "0111001", "6": "0000101", "7": "0010001", "8": "0001001", "9": "0010111" };
+const EAN_R = { "0": "1110010", "1": "1100110", "2": "1101100", "3": "1000010", "4": "1011100", "5": "1001110", "6": "1010000", "7": "1000100", "8": "1001000", "9": "1110100" };
+const EAN_PARITY = { "0": "LLLLLL", "1": "LLGLGG", "2": "LLGGLG", "3": "LLGGGL", "4": "LGLLGG", "5": "LGGLLG", "6": "LGGGLL", "7": "LGLGLG", "8": "LGLGGL", "9": "LGGLGL" };
+
+function ean13CheckDigit(d12) {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += (i % 2 === 0 ? 1 : 3) * Number(d12[i]);
+  const mod = sum % 10;
+  return mod === 0 ? 0 : 10 - mod;
+}
+function ean8CheckDigit(d7) {
+  let sum = 0;
+  for (let i = 0; i < 7; i++) sum += (i % 2 === 0 ? 3 : 1) * Number(d7[i]);
+  const mod = sum % 10;
+  return mod === 0 ? 0 : 10 - mod;
+}
+function encodeEAN13(digits13) {
+  const parity = EAN_PARITY[digits13[0]];
+  let bin = "101";
+  for (let i = 1; i <= 6; i++) bin += (parity[i - 1] === "L" ? EAN_L : EAN_G)[digits13[i]];
+  bin += "01010";
+  for (let i = 7; i <= 12; i++) bin += EAN_R[digits13[i]];
+  bin += "101";
+  return bin;
+}
+function encodeEAN8(digits8) {
+  let bin = "101";
+  for (let i = 0; i < 4; i++) bin += EAN_L[digits8[i]];
+  bin += "01010";
+  for (let i = 4; i < 8; i++) bin += EAN_R[digits8[i]];
+  bin += "101";
+  return bin;
+}
+
+// Normalise n'importe quelle suite de chiffres entrée à la main en un code-barres EAN-13 ou EAN-8
+// valide et affichable : complète la clé de contrôle si elle manque, ou recadre sur 13 chiffres
+// pour les longueurs non standard.
+function normalizeBarcode(raw) {
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.length === 7) digits += String(ean8CheckDigit(digits));
+  if (digits.length === 8) return { digits, bin: encodeEAN8(digits) };
+  if (digits.length === 12) digits += String(ean13CheckDigit(digits));
+  if (digits.length === 13) return { digits, bin: encodeEAN13(digits) };
+  digits = digits.slice(-13).padStart(13, "0");
+  return { digits, bin: encodeEAN13(digits) };
+}
+
+// Rendu SVG du code-barres à partir de la chaîne de modules binaires (barres = "1", blancs = "0")
+function BarcodeSvg({ code, height = 100 }) {
+  const encoded = useMemo(() => normalizeBarcode(code), [code]);
+  if (!encoded) return null;
+  const n = encoded.bin.length;
+  return (
+    <svg viewBox={`0 0 ${n} 100`} preserveAspectRatio="none" style={{ width: "100%", height, display: "block" }}>
+      <rect x={0} y={0} width={n} height={100} fill="#FFFFFF" />
+      {encoded.bin.split("").map((b, i) => (b === "1" ? <rect key={i} x={i} y={0} width={1} height={100} fill="#14171C" /> : null))}
+    </svg>
+  );
+}
+
+// --- Modal quantité / note --------------------------------------------------
+
 function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabel }) {
   const [qty, setQty] = useState(initial?.qty ?? 1);
   const [unit, setUnit] = useState(initial?.unit ?? "paquet");
@@ -1407,6 +1478,212 @@ function ListSwitcherModal({ lists, activeListId, onClose, onSelect, onCreate, o
   );
 }
 
+// --- Cartes de fidélité : section dans "Ma liste" ---------------------------
+
+function LoyaltyCardsSection({ cards, onOpenCard, onManage }) {
+  return (
+    <section style={{ marginBottom: 26 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 700, margin: 0, color: "#23262E" }}>Vos cartes</h2>
+        <button
+          onClick={onManage}
+          style={{ marginLeft: "auto", background: "none", border: "none", color: "#4E9D5B", fontWeight: 700, fontSize: 12.5, cursor: "pointer", padding: 0 }}
+        >
+          Modifier les cartes
+        </button>
+      </div>
+      {cards.length === 0 ? (
+        <button
+          onClick={onManage}
+          style={{ width: "100%", padding: "16px", borderRadius: 14, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          <Plus size={14} /> Ajouter une carte de fidélité
+        </button>
+      ) : (
+        <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 4 }}>
+          {cards.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onOpenCard(c)}
+              style={{ flex: "0 0 auto", minWidth: 140, padding: "22px 16px", borderRadius: 16, border: "none", background: `linear-gradient(135deg, ${c.color}, ${c.color}CC)`, color: "#FFFFFF", fontWeight: 700, fontSize: 15, cursor: "pointer", textAlign: "center", boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// --- Cartes de fidélité : menu "Modifier les cartes" -------------------------
+
+function CardsManagerModal({ cards, onClose, onEditCard, onAddCard, onDeleteCard }) {
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 90 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "80vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0" }}
+      >
+        <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>Vos cartes</div>
+          <button onClick={onClose} style={{ background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: "auto", padding: "14px 20px 20px" }}>
+          {cards.length === 0 && (
+            <p style={{ color: "#A8A695", fontSize: 13.5, margin: "6px 0 16px" }}>Aucune carte pour l'instant.</p>
+          )}
+          {cards.map((c) => (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 12px", marginBottom: 8, borderRadius: 12, border: "1px solid #ECE4D0" }}>
+              <span style={{ width: 14, height: 14, borderRadius: 4, background: c.color, flexShrink: 0 }} />
+              <button onClick={() => onEditCard(c)} style={{ flex: 1, textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: "#23262E" }}>{c.name}</div>
+                <div style={{ fontSize: 11.5, color: "#9A9887", marginTop: 2 }}>•••• {c.code.slice(-4)}</div>
+              </button>
+              <button onClick={() => setConfirmDeleteId(c.id)} title="Supprimer cette carte" style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <X size={13} />
+              </button>
+            </div>
+          ))}
+
+          <button
+            onClick={onAddCard}
+            style={{ width: "100%", padding: "12px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 13.5, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 4 }}
+          >
+            <Plus size={14} /> Ajouter une carte
+          </button>
+        </div>
+      </div>
+
+      {confirmDeleteId && (
+        <div
+          onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.75)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>🗑️ Supprimer cette carte ?</div>
+            <p style={{ fontSize: 14, color: "#7A7968", margin: "0 0 20px", lineHeight: 1.5 }}>Cette action est irréversible.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid #ECE4D0", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button
+                onClick={() => { onDeleteCard(confirmDeleteId); setConfirmDeleteId(null); }}
+                style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Cartes de fidélité : formulaire d'ajout / édition -----------------------
+
+function CardEditModal({ mode, card, onClose, onSave, onDelete }) {
+  const [name, setName] = useState(card?.name ?? "");
+  const [code, setCode] = useState(card?.code ?? "");
+  const isEdit = mode === "edit";
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 95 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid #ECE4D0", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <span style={{ fontSize: 17, fontWeight: 700 }}>{isEdit ? "Modifier la carte" : "Nouvelle carte"}</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "#ECE4D0", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Nom du magasin</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="ex : Auchan"
+          style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+        />
+
+        <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Chiffres du code-barres</label>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
+          inputMode="numeric"
+          placeholder="ex : 0491353000159"
+          style={{ width: "100%", marginTop: 8, marginBottom: 6, background: "#FBF7EA", border: "1px solid #ECE4D0", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit", letterSpacing: "0.03em" }}
+        />
+        <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "0 0 22px", lineHeight: 1.4 }}>
+          Recopie les chiffres inscrits sous le code-barres de ta carte (généralement 8 ou 13 chiffres).
+        </p>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          {isEdit && onDelete && (
+            <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+              Supprimer
+            </button>
+          )}
+          <button
+            disabled={!name.trim() || !code.trim()}
+            onClick={() => onSave({ name: name.trim(), code: code.trim() })}
+            style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: !name.trim() || !code.trim() ? "#ECE4D0" : "#4E9D5B", color: !name.trim() || !code.trim() ? "#A8A695" : "#FBF7EA", fontWeight: 700, fontSize: 14.5, cursor: !name.trim() || !code.trim() ? "default" : "pointer" }}
+          >
+            {isEdit ? "Enregistrer" : "Ajouter la carte"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Cartes de fidélité : vue grand format du code-barres --------------------
+
+function CardBarcodeModal({ card, onClose }) {
+  const normalized = useMemo(() => normalizeBarcode(card.code), [card.code]);
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 95, padding: 24 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 360, borderRadius: 20, overflow: "hidden", boxShadow: "0 20px 50px rgba(0,0,0,0.45)" }}
+      >
+        <div style={{ background: card.color, padding: "20px 46px", position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "#FFFFFF", fontWeight: 700, fontSize: 19, textAlign: "center" }}>{card.name}</span>
+          <button
+            onClick={onClose}
+            style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "rgba(255,255,255,0.28)", border: "none", borderRadius: "50%", width: 28, height: 28, color: "#FFFFFF", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+        <div style={{ background: "#FFFFFF", padding: "28px 20px 26px", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <BarcodeSvg code={card.code} height={110} />
+          {normalized && (
+            <div style={{ fontSize: 19, fontWeight: 700, color: "#14171C", letterSpacing: "0.05em" }}>{normalized.digits}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- App -------------------------------------------------------------------
 
 function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, optionsOpen, onCloseOptions }) {
@@ -1434,6 +1711,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [deletedProductIds, setDeletedProductIds] = useState(() => initialData?.deletedProductIds ?? []); // ids d'articles (de base) supprimés
   const [customIcons, setCustomIcons] = useState(() => initialData?.customIcons ?? []); // icônes/emoji perso importés (data URLs)
   const [productModal, setProductModal] = useState(null); // null | {mode:'create'} | {mode:'edit', product}
+  const [loyaltyCards, setLoyaltyCards] = useState(() => initialData?.loyaltyCards ?? []); // cartes de fidélité { id, name, code, color }
+  const [showCardsManager, setShowCardsManager] = useState(false);
+  const [cardModal, setCardModal] = useState(null); // null | {mode:'create'} | {mode:'edit', card}
+  const [viewingCard, setViewingCard] = useState(null); // carte affichée en grand (code-barres)
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [androidInstalled, setAndroidInstalled] = useState(false);
 
@@ -1454,8 +1735,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const skipNextPush = useRef(false);
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
-    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId });
-  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId]);
+    if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards });
+  }, [list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards]);
 
   // Applique les changements reçus en temps réel d'un autre utilisateur du foyer
   useEffect(() => {
@@ -1468,6 +1749,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     setProductOverrides(remoteData.productOverrides ?? {});
     setDeletedProductIds(remoteData.deletedProductIds ?? []);
     setCustomIcons(remoteData.customIcons ?? []);
+    setLoyaltyCards(remoteData.loyaltyCards ?? []);
     setLists(remoteData.lists?.length ? remoteData.lists : [{ id: "default", name: "Ma liste" }]);
     setActiveListId(remoteData.activeListId ?? remoteData.lists?.[0]?.id ?? "default");
   }, [remoteVersion]);
@@ -1591,6 +1873,26 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const deleteFromProductModal = () => {
     deleteProduct(productModal.product.id);
     closeProductModal();
+  };
+
+  // Cartes de fidélité
+  const addCard = ({ name, code }) => {
+    const color = CARD_COLORS[loyaltyCards.length % CARD_COLORS.length];
+    setLoyaltyCards((l) => [...l, { id: `card-${Date.now()}`, name, code: code.replace(/\D/g, ""), color }]);
+  };
+  const editCard = (id, patch) => setLoyaltyCards((l) => l.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  const deleteCard = (id) => setLoyaltyCards((l) => l.filter((c) => c.id !== id));
+  const openAddCardModal = () => setCardModal({ mode: "create" });
+  const openEditCardModal = (card) => setCardModal({ mode: "edit", card });
+  const closeCardModal = () => setCardModal(null);
+  const saveCardModal = ({ name, code }) => {
+    if (cardModal.mode === "create") addCard({ name, code });
+    else editCard(cardModal.card.id, { name, code: code.replace(/\D/g, "") });
+    closeCardModal();
+  };
+  const deleteFromCardModal = () => {
+    deleteCard(cardModal.card.id);
+    closeCardModal();
   };
 
   const results = useMemo(() => {
@@ -1903,6 +2205,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             ))
           ))}
 
+        {tab === "liste" && (
+          <LoyaltyCardsSection
+            cards={loyaltyCards}
+            onOpenCard={(card) => setViewingCard(card)}
+            onManage={() => setShowCardsManager(true)}
+          />
+        )}
+
         {tab === "liste" && boughtItems.length > 0 && (
           <section style={{ marginBottom: 26, marginTop: grouped.length === 0 ? 0 : 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
@@ -2133,6 +2443,30 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         />
       )}
 
+      {showCardsManager && (
+        <CardsManagerModal
+          cards={loyaltyCards}
+          onClose={() => setShowCardsManager(false)}
+          onEditCard={openEditCardModal}
+          onAddCard={openAddCardModal}
+          onDeleteCard={deleteCard}
+        />
+      )}
+
+      {cardModal && (
+        <CardEditModal
+          mode={cardModal.mode}
+          card={cardModal.card}
+          onClose={closeCardModal}
+          onSave={saveCardModal}
+          onDelete={cardModal.mode === "edit" ? deleteFromCardModal : null}
+        />
+      )}
+
+      {viewingCard && (
+        <CardBarcodeModal card={viewingCard} onClose={() => setViewingCard(null)} />
+      )}
+
       {undoState && (
         <div style={{ position: "fixed", left: 0, right: 0, bottom: 18, display: "flex", justifyContent: "center", zIndex: 100, padding: "0 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14, background: "#FFFFFF", border: "1px solid #D8CFB0", borderRadius: 14, padding: "12px 16px", boxShadow: "0 12px 28px rgba(0,0,0,0.4)", maxWidth: 440, width: "100%" }}>
@@ -2263,7 +2597,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const emptyData = {
   list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [],
-  customIcons: [], lists: [{ id: "default", name: "Ma liste" }], activeListId: "default",
+  customIcons: [], lists: [{ id: "default", name: "Ma liste" }], activeListId: "default", loyaltyCards: [],
 };
 
 function rowToData(row) {
@@ -2277,6 +2611,7 @@ function rowToData(row) {
     customIcons: row.custom_icons ?? [],
     lists: row.lists?.length ? row.lists : [{ id: "default", name: "Ma liste" }],
     activeListId: row.active_list_id ?? (row.lists?.[0]?.id ?? "default"),
+    loyaltyCards: row.loyalty_cards ?? [],
   };
 }
 
@@ -2975,6 +3310,7 @@ function Root() {
       custom_icons: data.customIcons,
       lists: data.lists,
       active_list_id: data.activeListId,
+      loyalty_cards: data.loyaltyCards,
       updated_at: new Date().toISOString(),
       updated_by: userId,
     }, { onConflict: "household_id" });
