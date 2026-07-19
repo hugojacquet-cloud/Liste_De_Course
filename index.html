@@ -2048,21 +2048,39 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     reader.onload = (e) => {
       let data;
       try { data = JSON.parse(e.target.result); } catch (err) { return; }
-      setProductOverrides((prev) => {
-        const next = { ...prev };
-        Object.keys(data || {}).forEach((id) => {
-          const entry = data[id];
-          if (!entry) return;
-          const priced = entry.priceKg !== undefined || typeof entry.priceUnit === "number"
-            ? entry
-            : entry.price != null
-              ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
-              : null;
-          if (!priced) return;
-          next[id] = { ...(next[id] || {}), ...priced };
-        });
-        return next;
+      const forCustom = {};
+      const forBase = {};
+      Object.keys(data || {}).forEach((id) => {
+        const entry = data[id];
+        if (!entry) return;
+        const priced = entry.priceKg !== undefined || typeof entry.priceUnit === "number"
+          ? entry
+          : entry.price != null
+            ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
+            : null;
+        if (!priced) return;
+        if (id.startsWith("custom-")) forCustom[id] = priced;
+        else forBase[id] = priced;
       });
+      // Articles personnalisés : le prix importé s'applique directement sur l'article, jamais via
+      // un override — sinon il pourrait un jour masquer une modification faite depuis l'appli
+      // (c'est exactement ce qui causait le bug "le prix ne s'enregistre pas").
+      if (Object.keys(forCustom).length) {
+        setCustomProducts((l) => l.map((p) => (forCustom[p.id] ? { ...p, ...forCustom[p.id] } : p)));
+        setProductOverrides((prev) => {
+          const next = { ...prev };
+          Object.keys(forCustom).forEach((id) => { delete next[id]; });
+          return next;
+        });
+      }
+      // Articles du catalogue de base : comportement inchangé, prix appliqué en override.
+      if (Object.keys(forBase).length) {
+        setProductOverrides((prev) => {
+          const next = { ...prev };
+          Object.keys(forBase).forEach((id) => { next[id] = { ...(next[id] || {}), ...forBase[id] }; });
+          return next;
+        });
+      }
     };
     reader.readAsText(file);
   };
@@ -2071,7 +2089,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const products = useMemo(() => {
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
     const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
-    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
+    // Les articles personnalisés ne passent jamais par productOverrides : leur prix/nom/icône vivent
+    // uniquement dans customProducts, pour éviter qu'un ancien override (ex : import de prix.json avec
+    // un id personnalisé) ne masque silencieusement une modification faite depuis l'appli.
+    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id));
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
@@ -2083,6 +2104,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const editProduct = (id, patch) => {
     if (id.startsWith("custom-")) {
       setCustomProducts((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+      // Nettoie un éventuel override resté coincé sur cet id personnalisé (ex : ancien import de prix
+      // ayant écrit dessus par erreur) — sinon il masquerait la modification qu'on vient de faire.
+      setProductOverrides((o) => {
+        if (!(id in o)) return o;
+        const next = { ...o };
+        delete next[id];
+        return next;
+      });
     } else {
       setProductOverrides((o) => ({ ...o, [id]: { ...(o[id] || {}), ...patch } }));
     }
