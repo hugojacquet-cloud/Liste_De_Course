@@ -2052,6 +2052,18 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   // skipNextPush évite de renvoyer un état qu'on vient tout juste de recevoir d'un autre
   // utilisateur (sinon : boucle infinie de synchro entre les foyers connectés).
   const skipNextPush = useRef(false);
+
+  // Nettoyage ponctuel au chargement : si un article personnalisé a été depuis intégré au catalogue
+  // de base (même id), on le retire réellement de customProducts au lieu de juste le masquer —
+  // la synchro normale (ci-dessous) répercute ce nettoyage sur Supabase, sans données orphelines.
+  useEffect(() => {
+    const baseIds = new Set(PRODUCTS.map((p) => p.id));
+    setCustomProducts((l) => {
+      const cleaned = l.filter((p) => !baseIds.has(p.id));
+      return cleaned.length === l.length ? l : cleaned;
+    });
+  }, []);
+
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
     if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards, categoryOrder });
@@ -2100,6 +2112,25 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     const a = document.createElement("a");
     a.href = url;
     a.download = "prix.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Exporte la liste des articles personnalisés (id/nom/icône/rayon/variantes — sans les prix ni
+  // les recettes) : utile pour faire relire/intégrer ces articles dans le catalogue de base.
+  const exportCustomProducts = () => {
+    const out = customProducts.map((p) => ({
+      id: p.id,
+      name: p.name,
+      icon: p.icon,
+      cat: p.cat,
+      variants: p.variants ?? [],
+    }));
+    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "articles_personnalises.json";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -2153,10 +2184,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const products = useMemo(() => {
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
     const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
+    const baseIds = new Set(PRODUCTS.map((p) => p.id));
     // Les articles personnalisés ne passent jamais par productOverrides : leur prix/nom/icône vivent
     // uniquement dans customProducts, pour éviter qu'un ancien override (ex : import de prix.json avec
     // un id personnalisé) ne masque silencieusement une modification faite depuis l'appli.
-    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id));
+    // Si un article personnalisé partage désormais l'id d'un article du catalogue de base (ex : après
+    // son intégration au catalogue), la version de base prend le dessus — évite tout doublon à l'écran.
+    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id) && !baseIds.has(p.id));
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
@@ -2900,6 +2934,20 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
               />
             </div>
+
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Articles personnalisés</label>
+            <button
+              onClick={exportCustomProducts}
+              title="Télécharger la liste des articles que tu as créés toi-même (hors catalogue de base)"
+              style={{ width: "100%", marginTop: 8, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
+            >
+              Exporter mes articles personnalisés
+            </button>
+            <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 0", lineHeight: 1.4 }}>
+              {customProducts.length === 0
+                ? "Aucun article personnalisé pour l'instant."
+                : `${customProducts.length} article${customProducts.length > 1 ? "s" : ""} personnalisé${customProducts.length > 1 ? "s" : ""} (hors catalogue de base, hors prix et recettes).`}
+            </p>
 
             <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Installer l'application</label>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
