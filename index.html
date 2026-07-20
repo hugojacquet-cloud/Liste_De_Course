@@ -376,6 +376,10 @@ const RAW_PRODUCTS = [
 
   // Ajouts récents (ticket 19/07/2026)
   ["steak_vegetal","Steak végétal","🌱"],["carottes_rapees","Carottes râpées","🥕"],["fromage_tranche","Fromage en tranches","🧀"],["pain_seigle","Pain de seigle","🍞"],
+
+  // Articles personnalisés intégrés au catalogue (id d'origine conservés pour ne pas casser
+  // les listes/recettes qui les référencent déjà)
+  ["custom-1784391554316","Rouelle de porc","🥩"],["custom-1784444990032","taboulé","🍲"],["custom-1784501610690","Échine de porc","🥩"],["custom-1784502158802","Galette Végétale","🌱",[{id:"v-1784502142614",name:"Galet.Quinoa"}]],
 ];
 
 
@@ -400,6 +404,10 @@ const BLOCK_SIZES = [
   ["fruits_legumes", 1],
   ["produits_laitiers", 1],
   ["pain_patisserie", 1],
+  ["viande_poisson", 1],
+  ["surgeles_plats", 1],
+  ["viande_poisson", 1],
+  ["surgeles_plats", 1],
 ];
 
 
@@ -785,6 +793,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [weight, setWeight] = useState(product?.weight != null ? String(product.weight).replace(".", ",") : "");
   const [variants, setVariants] = useState(product?.variants ?? []);
   const [variantsOpen, setVariantsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const c = catInfo(cat) || CATEGORIES[0];
   const isEdit = mode === "edit";
 
@@ -974,11 +983,22 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
         </div>
 
         <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid var(--color-primary-border)", flexShrink: 0, background: "#FFFFFF" }}>
-          {isEdit && onDelete && (
-            <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+          {isEdit && onDelete && !confirmDelete && (
+            <button onClick={() => setConfirmDelete(true)} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Supprimer
             </button>
           )}
+          {isEdit && onDelete && confirmDelete && (
+            <>
+              <button onClick={() => setConfirmDelete(false)} style={{ padding: "13px 14px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>
+                Annuler
+              </button>
+              <button onClick={onDelete} style={{ padding: "13px 14px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FFFFFF", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
+                Confirmer la suppression
+              </button>
+            </>
+          )}
+          {!confirmDelete && (
           <button
             disabled={!name.trim()}
             onClick={() => {
@@ -999,6 +1019,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           >
             {isEdit ? "Enregistrer" : "Créer l'article"}
           </button>
+          )}
         </div>
       </div>
     </div>
@@ -2124,6 +2145,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       name: p.name,
       icon: p.icon,
       cat: p.cat,
+      weight: p.weight ?? null,
       variants: p.variants ?? [],
     }));
     const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
@@ -2143,6 +2165,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     reader.onload = (e) => {
       let data;
       try { data = JSON.parse(e.target.result); } catch (err) { return; }
+      const customIds = new Set(customProducts.map((p) => p.id));
       const forCustom = {};
       const forBase = {};
       Object.keys(data || {}).forEach((id) => {
@@ -2154,7 +2177,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
             : null;
         if (!priced) return;
-        if (id.startsWith("custom-")) forCustom[id] = priced;
+        // On se base sur l'appartenance réelle à customProducts, pas sur le préfixe de l'id : un
+        // article personnalisé intégré depuis au catalogue de base garde son id d'origine (souvent
+        // "custom-...") mais doit désormais recevoir son prix comme un article de base (override).
+        if (customIds.has(id)) forCustom[id] = priced;
         else forBase[id] = priced;
       });
       // Articles personnalisés : le prix importé s'applique directement sur l'article, jamais via
@@ -2200,7 +2226,12 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return p;
   };
   const editProduct = (id, patch) => {
-    if (id.startsWith("custom-")) {
+    // On se base sur l'appartenance réelle à customProducts, pas sur le préfixe de l'id : un article
+    // personnalisé intégré au catalogue de base garde souvent son id "custom-..." d'origine mais doit
+    // désormais être traité comme un article de base (override), sans quoi l'édition ne s'enregistre
+    // plus (c'est exactement ce qui causait le bug "le prix ne s'enregistre pas").
+    const isCustom = customProducts.some((p) => p.id === id);
+    if (isCustom) {
       setCustomProducts((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)));
       // Nettoie un éventuel override resté coincé sur cet id personnalisé (ex : ancien import de prix
       // ayant écrit dessus par erreur) — sinon il masquerait la modification qu'on vient de faire.
@@ -2215,7 +2246,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     }
   };
   const deleteProduct = (id) => {
-    if (id.startsWith("custom-")) {
+    const isCustom = customProducts.some((p) => p.id === id);
+    if (isCustom) {
       setCustomProducts((l) => l.filter((p) => p.id !== id));
     } else {
       setDeletedProductIds((ids) => [...ids, id]);
