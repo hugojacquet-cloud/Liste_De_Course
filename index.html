@@ -376,10 +376,6 @@ const RAW_PRODUCTS = [
 
   // Ajouts récents (ticket 19/07/2026)
   ["steak_vegetal","Steak végétal","🌱"],["carottes_rapees","Carottes râpées","🥕"],["fromage_tranche","Fromage en tranches","🧀"],["pain_seigle","Pain de seigle","🍞"],
-
-  // Articles personnalisés intégrés au catalogue (id d'origine conservés pour ne pas casser
-  // les listes/recettes qui les référencent déjà)
-  ["custom-1784391554316","Rouelle de porc","🥩"],["custom-1784444990032","taboulé","🍲"],["custom-1784501610690","Échine de porc","🥩"],["custom-1784502158802","Galette Végétale","🌱",[{id:"v-1784502142614",name:"Galet.Quinoa"}]],
 ];
 
 
@@ -404,10 +400,6 @@ const BLOCK_SIZES = [
   ["fruits_legumes", 1],
   ["produits_laitiers", 1],
   ["pain_patisserie", 1],
-  ["viande_poisson", 1],
-  ["surgeles_plats", 1],
-  ["viande_poisson", 1],
-  ["surgeles_plats", 1],
 ];
 
 
@@ -793,7 +785,6 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
   const [weight, setWeight] = useState(product?.weight != null ? String(product.weight).replace(".", ",") : "");
   const [variants, setVariants] = useState(product?.variants ?? []);
   const [variantsOpen, setVariantsOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const c = catInfo(cat) || CATEGORIES[0];
   const isEdit = mode === "edit";
 
@@ -983,22 +974,11 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
         </div>
 
         <div style={{ display: "flex", gap: 10, padding: "14px 20px", borderTop: "1px solid var(--color-primary-border)", flexShrink: 0, background: "#FFFFFF" }}>
-          {isEdit && onDelete && !confirmDelete && (
-            <button onClick={() => setConfirmDelete(true)} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+          {isEdit && onDelete && (
+            <button onClick={onDelete} style={{ padding: "13px 18px", borderRadius: 12, border: "1px solid #C4574A55", background: "transparent", color: "#C4574A", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
               Supprimer
             </button>
           )}
-          {isEdit && onDelete && confirmDelete && (
-            <>
-              <button onClick={() => setConfirmDelete(false)} style={{ padding: "13px 14px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}>
-                Annuler
-              </button>
-              <button onClick={onDelete} style={{ padding: "13px 14px", borderRadius: 12, border: "none", background: "#C4574A", color: "#FFFFFF", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
-                Confirmer la suppression
-              </button>
-            </>
-          )}
-          {!confirmDelete && (
           <button
             disabled={!name.trim()}
             onClick={() => {
@@ -1019,7 +999,6 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           >
             {isEdit ? "Enregistrer" : "Créer l'article"}
           </button>
-          )}
         </div>
       </div>
     </div>
@@ -2073,18 +2052,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   // skipNextPush évite de renvoyer un état qu'on vient tout juste de recevoir d'un autre
   // utilisateur (sinon : boucle infinie de synchro entre les foyers connectés).
   const skipNextPush = useRef(false);
-
-  // Nettoyage ponctuel au chargement : si un article personnalisé a été depuis intégré au catalogue
-  // de base (même id), on le retire réellement de customProducts au lieu de juste le masquer —
-  // la synchro normale (ci-dessous) répercute ce nettoyage sur Supabase, sans données orphelines.
-  useEffect(() => {
-    const baseIds = new Set(PRODUCTS.map((p) => p.id));
-    setCustomProducts((l) => {
-      const cleaned = l.filter((p) => !baseIds.has(p.id));
-      return cleaned.length === l.length ? l : cleaned;
-    });
-  }, []);
-
   useEffect(() => {
     if (skipNextPush.current) { skipNextPush.current = false; return; }
     if (onDataChange) onDataChange({ list, recipes, customProducts, productOverrides, deletedProductIds, customIcons, lists, activeListId, loyaltyCards, categoryOrder });
@@ -2137,26 +2104,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     URL.revokeObjectURL(url);
   };
 
-  // Exporte la liste des articles personnalisés (id/nom/icône/rayon/variantes — sans les prix ni
-  // les recettes) : utile pour faire relire/intégrer ces articles dans le catalogue de base.
-  const exportCustomProducts = () => {
-    const out = customProducts.map((p) => ({
-      id: p.id,
-      name: p.name,
-      icon: p.icon,
-      cat: p.cat,
-      weight: p.weight ?? null,
-      variants: p.variants ?? [],
-    }));
-    const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "articles_personnalises.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   // Importe un fichier de prix (ancien ou nouveau format) et l'applique comme overrides.
   // Import ponctuel : une fois fait, ces prix vivent dans productOverrides et se synchronisent
   // normalement avec le reste du foyer, sans dépendre d'un fichier séparé.
@@ -2165,7 +2112,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     reader.onload = (e) => {
       let data;
       try { data = JSON.parse(e.target.result); } catch (err) { return; }
-      const customIds = new Set(customProducts.map((p) => p.id));
       const forCustom = {};
       const forBase = {};
       Object.keys(data || {}).forEach((id) => {
@@ -2177,10 +2123,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
             : null;
         if (!priced) return;
-        // On se base sur l'appartenance réelle à customProducts, pas sur le préfixe de l'id : un
-        // article personnalisé intégré depuis au catalogue de base garde son id d'origine (souvent
-        // "custom-...") mais doit désormais recevoir son prix comme un article de base (override).
-        if (customIds.has(id)) forCustom[id] = priced;
+        if (id.startsWith("custom-")) forCustom[id] = priced;
         else forBase[id] = priced;
       });
       // Articles personnalisés : le prix importé s'applique directement sur l'article, jamais via
@@ -2210,13 +2153,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const products = useMemo(() => {
     const applyOverride = (p) => (productOverrides[p.id] ? { ...p, ...productOverrides[p.id] } : p);
     const base = PRODUCTS.filter((p) => !deletedProductIds.includes(p.id)).map(applyOverride);
-    const baseIds = new Set(PRODUCTS.map((p) => p.id));
     // Les articles personnalisés ne passent jamais par productOverrides : leur prix/nom/icône vivent
     // uniquement dans customProducts, pour éviter qu'un ancien override (ex : import de prix.json avec
     // un id personnalisé) ne masque silencieusement une modification faite depuis l'appli.
-    // Si un article personnalisé partage désormais l'id d'un article du catalogue de base (ex : après
-    // son intégration au catalogue), la version de base prend le dessus — évite tout doublon à l'écran.
-    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id) && !baseIds.has(p.id));
+    const customs = customProducts.filter((p) => !deletedProductIds.includes(p.id));
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
@@ -2226,12 +2166,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return p;
   };
   const editProduct = (id, patch) => {
-    // On se base sur l'appartenance réelle à customProducts, pas sur le préfixe de l'id : un article
-    // personnalisé intégré au catalogue de base garde souvent son id "custom-..." d'origine mais doit
-    // désormais être traité comme un article de base (override), sans quoi l'édition ne s'enregistre
-    // plus (c'est exactement ce qui causait le bug "le prix ne s'enregistre pas").
-    const isCustom = customProducts.some((p) => p.id === id);
-    if (isCustom) {
+    if (id.startsWith("custom-")) {
       setCustomProducts((l) => l.map((p) => (p.id === id ? { ...p, ...patch } : p)));
       // Nettoie un éventuel override resté coincé sur cet id personnalisé (ex : ancien import de prix
       // ayant écrit dessus par erreur) — sinon il masquerait la modification qu'on vient de faire.
@@ -2246,8 +2181,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     }
   };
   const deleteProduct = (id) => {
-    const isCustom = customProducts.some((p) => p.id === id);
-    if (isCustom) {
+    if (id.startsWith("custom-")) {
       setCustomProducts((l) => l.filter((p) => p.id !== id));
     } else {
       setDeletedProductIds((ids) => [...ids, id]);
@@ -2966,20 +2900,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
               />
             </div>
-
-            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Articles personnalisés</label>
-            <button
-              onClick={exportCustomProducts}
-              title="Télécharger la liste des articles que tu as créés toi-même (hors catalogue de base)"
-              style={{ width: "100%", marginTop: 8, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
-            >
-              Exporter mes articles personnalisés
-            </button>
-            <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 0", lineHeight: 1.4 }}>
-              {customProducts.length === 0
-                ? "Aucun article personnalisé pour l'instant."
-                : `${customProducts.length} article${customProducts.length > 1 ? "s" : ""} personnalisé${customProducts.length > 1 ? "s" : ""} (hors catalogue de base, hors prix et recettes).`}
-            </p>
 
             <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Installer l'application</label>
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
