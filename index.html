@@ -1591,7 +1591,7 @@ function ExportChoiceModal({ title, onClose, onLocal, onCloud, busy }) {
           {busy ? "Sauvegarde…" : "☁️ Export cloud — sauvegarde dans Supabase"}
         </button>
         <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "10px 0 0", lineHeight: 1.4 }}>
-          L'export cloud écrase la précédente sauvegarde du même type pour ce foyer — récupérable ensuite via "Mise à jour".
+          L'export cloud écrase la précédente sauvegarde du même type — une seule sauvegarde globale, valable pour tous les foyers de l'appli.
         </p>
       </div>
     </div>
@@ -1972,76 +1972,104 @@ function CardBarcodeModal({ card, onClose }) {
 
 // --- Personnalisation : choix de couleurs (réglage local, non synchronisé) --
 
-function ColorPickerField({ label, value, onChange }) {
-  const [custom, setCustom] = useState(false);
+function ColorPickerModal({ label, value, onClose, onSave }) {
+  const [draft, setDraft] = useState(value);
+  const [custom, setCustom] = useState(() => !BASE_SWATCHES.some((sw) => sw.toLowerCase() === value.toLowerCase()));
   const [hsv, setHsv] = useState(() => hexToHsv(value));
 
-  const isSwatchActive = (hex) => hex.toLowerCase() === value.toLowerCase();
-
+  const pickSwatch = (hex) => { setCustom(false); setDraft(hex); };
   const openCustom = () => {
     // Si la couleur actuelle correspond à un des 8 teintes de base, le picker personnalisé reprend
     // sa teinte exacte ; sinon il démarre à saturation/valeur 100% (couleur franche par défaut).
-    const matchesSwatch = BASE_SWATCHES.some((sw) => sw.toLowerCase() === value.toLowerCase());
+    const matchesSwatch = BASE_SWATCHES.some((sw) => sw.toLowerCase() === draft.toLowerCase());
     if (matchesSwatch) {
-      setHsv(hexToHsv(value));
+      setHsv(hexToHsv(draft));
     } else {
-      const current = hexToHsv(value);
+      const current = hexToHsv(draft);
       const next = { h: current.h, s: 100, v: 100 };
       setHsv(next);
-      onChange(hsvToHex(next.h, next.s, next.v));
+      setDraft(hsvToHex(next.h, next.s, next.v));
     }
     setCustom(true);
   };
-
   const updateHsv = (patch) => {
     const next = { ...hsv, ...patch };
     setHsv(next);
-    onChange(hsvToHex(next.h, next.s, next.v));
+    setDraft(hsvToHex(next.h, next.s, next.v));
   };
 
-  return (
-    <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 12.5, fontWeight: 600, color: "#23262E", marginBottom: 8 }}>{label}</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {BASE_SWATCHES.map((hex) => (
-          <button
-            key={hex}
-            onClick={() => { setCustom(false); onChange(hex); }}
-            style={{ width: 30, height: 30, borderRadius: "50%", background: hex, border: isSwatchActive(hex) && !custom ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
-            aria-label={hex}
-          />
-        ))}
-      </div>
-      <button
-        onClick={openCustom}
-        style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px solid ${custom ? "#23262E" : "var(--color-primary-border)"}`, background: custom ? "#F5F1E4" : "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 12.5, cursor: "pointer" }}
-      >
-        <span style={{ width: 16, height: 16, borderRadius: "50%", background: value, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
-        Personnalisé
-      </button>
+  const hueTrackCss = "linear-gradient(to right, #FF0000, #FFFF00, #00FF00, #00FFFF, #0000FF, #FF00FF, #FF0000)";
+  const satTrackCss = `linear-gradient(to right, ${hsvToHex(hsv.h, 0, hsv.v)}, ${hsvToHex(hsv.h, 100, hsv.v)})`;
+  const valTrackCss = `linear-gradient(to right, #000000, ${hsvToHex(hsv.h, hsv.s, 100)})`;
 
-      {custom && (
-        <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: "var(--color-primary)", border: "1px solid var(--color-primary-border)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: "#9A9887", width: 62, flexShrink: 0 }}>Teinte</span>
-            <input type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ flex: 1 }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 11, color: "#9A9887", width: 62, flexShrink: 0 }}>Saturation</span>
-            <input type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ flex: 1 }} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 11, color: "#9A9887", width: 62, flexShrink: 0 }}>Valeur</span>
-            <input type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ flex: 1 }} />
-          </div>
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 96 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, background: "#FFFFFF", borderTop: "1px solid var(--color-primary-border)", borderRadius: "20px 20px 0 0", padding: "20px 20px 28px" }}>
+        <style>{`
+          .grad-slider { -webkit-appearance: none; appearance: none; height: 14px; border-radius: 999px; outline: none; }
+          .grad-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #FFFFFF; border: 2px solid #23262E; box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: pointer; }
+          .grad-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #FFFFFF; border: 2px solid #23262E; box-shadow: 0 1px 4px rgba(0,0,0,0.35); cursor: pointer; }
+        `}</style>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <span style={{ width: 30, height: 30, borderRadius: "50%", background: draft, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+          <span style={{ fontSize: 17, fontWeight: 700 }}>{label}</span>
+          <button onClick={onClose} style={{ marginLeft: "auto", background: "var(--color-primary-border)", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <X size={15} />
+          </button>
         </div>
-      )}
+
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Couleurs proposées</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+          {BASE_SWATCHES.map((hex) => (
+            <button
+              key={hex}
+              onClick={() => pickSwatch(hex)}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: hex, border: !custom && hex.toLowerCase() === draft.toLowerCase() ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
+              aria-label={hex}
+            />
+          ))}
+        </div>
+
+        <button
+          onClick={openCustom}
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "11px 14px", borderRadius: 12, border: `1px solid ${custom ? "#23262E" : "var(--color-primary-border)"}`, background: custom ? "#F5F1E4" : "var(--color-primary)", color: "#23262E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", marginBottom: custom ? 16 : 4 }}
+        >
+          🎨 Personnalisé
+        </button>
+
+        {custom && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Teinte</div>
+              <input className="grad-slider" type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ width: "100%", background: hueTrackCss }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Saturation</div>
+              <input className="grad-slider" type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ width: "100%", background: satTrackCss }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Valeur</div>
+              <input className="grad-slider" type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ width: "100%", background: valTrackCss }} />
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+            Annuler
+          </button>
+          <button onClick={() => { onSave(draft); onClose(); }} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "none", background: "var(--color-accent)", color: "var(--color-primary)", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}>
+            Enregistrer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccent, onSave, onApply, onDelete, onReset }) {
   const [paletteName, setPaletteName] = useState("");
+  const [openPicker, setOpenPicker] = useState(null); // null | "primary" | "accent"
   return (
     <div>
       <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Personnalisation 🎨</label>
@@ -2049,10 +2077,23 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
         Ces couleurs ne s'appliquent qu'à toi sur cet appareil — elles ne sont pas partagées avec le reste du foyer.
       </p>
 
-      <div style={{ display: "flex", gap: 16, marginBottom: 18, flexWrap: "wrap" }}>
-        <ColorPickerField label="Couleur principale" value={palette.primary} onChange={onChangePrimary} />
-        <ColorPickerField label="Couleur de contraste" value={palette.accent} onChange={onChangeAccent} />
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <button onClick={() => setOpenPicker("primary")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+          <span style={{ width: 26, height: 26, borderRadius: "50%", background: palette.primary, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#23262E" }}>Couleur principale</span>
+        </button>
+        <button onClick={() => setOpenPicker("accent")} style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, padding: "10px 12px", cursor: "pointer" }}>
+          <span style={{ width: 26, height: 26, borderRadius: "50%", background: palette.accent, border: "1px solid rgba(0,0,0,0.15)", flexShrink: 0 }} />
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: "#23262E" }}>Couleur de contraste</span>
+        </button>
       </div>
+
+      {openPicker === "primary" && (
+        <ColorPickerModal label="Couleur principale" value={palette.primary} onClose={() => setOpenPicker(null)} onSave={onChangePrimary} />
+      )}
+      {openPicker === "accent" && (
+        <ColorPickerModal label="Couleur de contraste" value={palette.accent} onClose={() => setOpenPicker(null)} onSave={onChangeAccent} />
+      )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         <input
@@ -2097,7 +2138,7 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
 
 // --- App -------------------------------------------------------------------
 
-function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, householdId, optionsOpen, onCloseOptions }) {
+function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, householdId, isAdmin, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
@@ -2291,17 +2332,18 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
   // Sauvegarde/lecture cloud : stockées directement dans la ligne courses_data du foyer
   // (colonnes price_backup / articles_backup — nécessite la migration Supabase indiquée).
+  // Sauvegarde/lecture cloud GLOBALE (une seule pour toute l'appli, pas par foyer) : ligne fixe
+  // "main" dans courses_global_backup. L'écriture est réservée à l'administrateur côté Supabase
+  // (policy RLS), la lecture est ouverte à tous les utilisateurs connectés.
   const saveCloudBackup = async (column, data) => {
-    if (!householdId) return false;
     setCloudBusy(true);
-    const { error } = await sb.from("courses_data").update({ [column]: data, [column + "_at"]: new Date().toISOString() }).eq("household_id", householdId);
+    const { error } = await sb.from("courses_global_backup").update({ [column]: data, [column + "_at"]: new Date().toISOString() }).eq("id", "main");
     setCloudBusy(false);
     return !error;
   };
   const loadCloudBackup = async (column) => {
-    if (!householdId) return null;
     setCloudBusy(true);
-    const { data, error } = await sb.from("courses_data").select(column).eq("household_id", householdId).maybeSingle();
+    const { data, error } = await sb.from("courses_global_backup").select(column).eq("id", "main").maybeSingle();
     setCloudBusy(false);
     if (error || !data) return null;
     return data[column] ?? null;
@@ -3191,7 +3233,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                   { key: "installation", label: "Installation" },
                   { key: "style", label: "Style" },
                   { key: "maj", label: "Mise à jour" },
-                  { key: "admin", label: "Admin" },
+                  ...(isAdmin ? [{ key: "admin", label: "Admin" }] : []),
                 ].map((t) => (
                   <button
                     key={t.key}
@@ -3246,7 +3288,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 <>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Récupérer depuis le cloud</label>
                   <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 14px", lineHeight: 1.4 }}>
-                    Récupère la dernière sauvegarde cloud de ce foyer (faite depuis l'onglet Admin → Export cloud).
+                    Récupère la dernière sauvegarde cloud (unique pour toute l'appli, faite par l'administrateur depuis l'onglet Admin → Export cloud).
                   </p>
                   <button
                     disabled={cloudBusy}
@@ -3268,7 +3310,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 </>
               )}
 
-              {optionsTab === "admin" && (
+              {optionsTab === "admin" && isAdmin && (
                 <>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix</label>
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -3385,6 +3427,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 const SUPABASE_URL = "https://wpsubdmndqthdonousps.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc3ViZG1uZHF0aGRvbm91c3BzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTU3MzUsImV4cCI6MjA5OTQzMTczNX0.sEtfKED9EwJoELfN8N3AkljfX9UmA-m8jbMAnXDzzO4";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// L'onglet Administrateur (export cloud des prix/articles) n'est visible que pour ce compte.
+// Remplace la valeur ci-dessous par ton UUID Supabase (Dashboard → Authentication → Users).
+const ADMIN_USER_ID = "REPLACE_WITH_YOUR_SUPABASE_USER_UUID";
 
 const emptyData = {
   list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [],
@@ -4170,7 +4215,7 @@ function Root() {
         </div>
       </div>
 
-      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} householdId={currentHouseholdId} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} />
+      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} householdId={currentHouseholdId} isAdmin={session.user.id === ADMIN_USER_ID} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} />
 
       {showAccount && (
         <AccountModal
