@@ -1974,24 +1974,9 @@ function CardBarcodeModal({ card, onClose }) {
 
 function ColorPickerModal({ label, value, onClose, onSave }) {
   const [draft, setDraft] = useState(value);
-  const [custom, setCustom] = useState(() => !BASE_SWATCHES.some((sw) => sw.toLowerCase() === value.toLowerCase()));
   const [hsv, setHsv] = useState(() => hexToHsv(value));
 
-  const pickSwatch = (hex) => { setCustom(false); setDraft(hex); };
-  const openCustom = () => {
-    // Si la couleur actuelle correspond à un des 8 teintes de base, le picker personnalisé reprend
-    // sa teinte exacte ; sinon il démarre à saturation/valeur 100% (couleur franche par défaut).
-    const matchesSwatch = BASE_SWATCHES.some((sw) => sw.toLowerCase() === draft.toLowerCase());
-    if (matchesSwatch) {
-      setHsv(hexToHsv(draft));
-    } else {
-      const current = hexToHsv(draft);
-      const next = { h: current.h, s: 100, v: 100 };
-      setHsv(next);
-      setDraft(hsvToHex(next.h, next.s, next.v));
-    }
-    setCustom(true);
-  };
+  const pickSwatch = (hex) => { setDraft(hex); setHsv(hexToHsv(hex)); };
   const updateHsv = (patch) => {
     const next = { ...hsv, ...patch };
     setHsv(next);
@@ -2019,40 +2004,32 @@ function ColorPickerModal({ label, value, onClose, onSave }) {
         </div>
 
         <div style={{ fontSize: 12, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Couleurs proposées</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
           {BASE_SWATCHES.map((hex) => (
             <button
               key={hex}
               onClick={() => pickSwatch(hex)}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: hex, border: !custom && hex.toLowerCase() === draft.toLowerCase() ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: hex, border: hex.toLowerCase() === draft.toLowerCase() ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
               aria-label={hex}
             />
           ))}
         </div>
 
-        <button
-          onClick={openCustom}
-          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "11px 14px", borderRadius: 12, border: `1px solid ${custom ? "#23262E" : "var(--color-primary-border)"}`, background: custom ? "#F5F1E4" : "var(--color-primary)", color: "#23262E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", marginBottom: custom ? 16 : 4 }}
-        >
-          🎨 Personnalisé
-        </button>
-
-        {custom && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Teinte</div>
-              <input className="grad-slider" type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ width: "100%", background: hueTrackCss }} />
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Saturation</div>
-              <input className="grad-slider" type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ width: "100%", background: satTrackCss }} />
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Valeur</div>
-              <input className="grad-slider" type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ width: "100%", background: valTrackCss }} />
-            </div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Personnalisé</div>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Teinte</div>
+            <input className="grad-slider" type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ width: "100%", background: hueTrackCss }} />
           </div>
-        )}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Saturation</div>
+            <input className="grad-slider" type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ width: "100%", background: satTrackCss }} />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Valeur</div>
+            <input className="grad-slider" type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ width: "100%", background: valTrackCss }} />
+          </div>
+        </div>
 
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
@@ -3429,7 +3406,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // L'onglet Administrateur (export cloud des prix/articles) n'est visible que pour ce compte.
 // Remplace la valeur ci-dessous par ton UUID Supabase (Dashboard → Authentication → Users).
-const ADMIN_USER_ID = "REPLACE_WITH_YOUR_SUPABASE_USER_UUID";
+const ADMIN_USER_ID = "1a1b0329-81b1-4e69-8198-4ab206defe21";
 
 const emptyData = {
   list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [],
@@ -3626,7 +3603,7 @@ function HouseholdScreen({ onCreate, onJoin, error }) {
 
 // --- Modale "Mon compte" -----------------------------------------------------
 
-function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
+function AccountModal({ email, userId, pseudo, onClose, onSavePseudo, onLogout }) {
   const [pseudoInput, setPseudoInput] = useState(pseudo || "");
   const [status, setStatus] = useState("");
 
@@ -3645,6 +3622,21 @@ function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
 
         <label style={labelStyle}>Email</label>
         <input style={{ ...fieldStyle, opacity: 0.6 }} value={email} disabled />
+
+        <label style={labelStyle}>Identifiant (UUID)</label>
+        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
+          <input style={{ ...fieldStyle, margin: 0, opacity: 0.6, fontSize: 12 }} value={userId} disabled />
+          <button
+            onClick={() => navigator.clipboard?.writeText(userId)}
+            title="Copier"
+            style={{ padding: "0 16px", borderRadius: 10, border: "none", background: "var(--color-primary-border)", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
+          >
+            Copier
+          </button>
+        </div>
+        <p style={{ fontSize: 11, color: "#ADAB98", margin: "-14px 0 20px", lineHeight: 1.4 }}>
+          Utile pour vérifier l'accès à l'onglet Administrateur — doit correspondre exactement à ADMIN_USER_ID dans le code.
+        </p>
 
         <label style={labelStyle}>Mon pseudo</label>
         <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
@@ -4220,6 +4212,7 @@ function Root() {
       {showAccount && (
         <AccountModal
           email={session.user.email}
+          userId={session.user.id}
           pseudo={pseudo}
           onClose={() => setShowAccount(false)}
           onSavePseudo={handleSavePseudo}
