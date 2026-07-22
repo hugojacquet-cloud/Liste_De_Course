@@ -1974,9 +1974,24 @@ function CardBarcodeModal({ card, onClose }) {
 
 function ColorPickerModal({ label, value, onClose, onSave }) {
   const [draft, setDraft] = useState(value);
+  const [custom, setCustom] = useState(() => !BASE_SWATCHES.some((sw) => sw.toLowerCase() === value.toLowerCase()));
   const [hsv, setHsv] = useState(() => hexToHsv(value));
 
-  const pickSwatch = (hex) => { setDraft(hex); setHsv(hexToHsv(hex)); };
+  const pickSwatch = (hex) => { setCustom(false); setDraft(hex); };
+  const openCustom = () => {
+    // Si la couleur actuelle correspond à un des 8 teintes de base, le picker personnalisé reprend
+    // sa teinte exacte ; sinon il démarre à saturation/valeur 100% (couleur franche par défaut).
+    const matchesSwatch = BASE_SWATCHES.some((sw) => sw.toLowerCase() === draft.toLowerCase());
+    if (matchesSwatch) {
+      setHsv(hexToHsv(draft));
+    } else {
+      const current = hexToHsv(draft);
+      const next = { h: current.h, s: 100, v: 100 };
+      setHsv(next);
+      setDraft(hsvToHex(next.h, next.s, next.v));
+    }
+    setCustom(true);
+  };
   const updateHsv = (patch) => {
     const next = { ...hsv, ...patch };
     setHsv(next);
@@ -2004,32 +2019,40 @@ function ColorPickerModal({ label, value, onClose, onSave }) {
         </div>
 
         <div style={{ fontSize: 12, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Couleurs proposées</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
           {BASE_SWATCHES.map((hex) => (
             <button
               key={hex}
               onClick={() => pickSwatch(hex)}
-              style={{ width: 36, height: 36, borderRadius: "50%", background: hex, border: hex.toLowerCase() === draft.toLowerCase() ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
+              style={{ width: 36, height: 36, borderRadius: "50%", background: hex, border: !custom && hex.toLowerCase() === draft.toLowerCase() ? "3px solid #23262E" : "1px solid rgba(0,0,0,0.12)", cursor: "pointer", padding: 0, flexShrink: 0 }}
               aria-label={hex}
             />
           ))}
         </div>
 
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>Personnalisé</div>
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Teinte</div>
-            <input className="grad-slider" type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ width: "100%", background: hueTrackCss }} />
+        <button
+          onClick={openCustom}
+          style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "11px 14px", borderRadius: 12, border: `1px solid ${custom ? "#23262E" : "var(--color-primary-border)"}`, background: custom ? "#F5F1E4" : "var(--color-primary)", color: "#23262E", fontWeight: 700, fontSize: 13.5, cursor: "pointer", marginBottom: custom ? 16 : 4 }}
+        >
+          🎨 Personnalisé
+        </button>
+
+        {custom && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Teinte</div>
+              <input className="grad-slider" type="range" min="0" max="360" value={hsv.h} onChange={(e) => updateHsv({ h: Number(e.target.value) })} style={{ width: "100%", background: hueTrackCss }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Saturation</div>
+              <input className="grad-slider" type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ width: "100%", background: satTrackCss }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Valeur</div>
+              <input className="grad-slider" type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ width: "100%", background: valTrackCss }} />
+            </div>
           </div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Saturation</div>
-            <input className="grad-slider" type="range" min="0" max="100" value={hsv.s} onChange={(e) => updateHsv({ s: Number(e.target.value) })} style={{ width: "100%", background: satTrackCss }} />
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: "#9A9887", fontWeight: 600, marginBottom: 6 }}>Valeur</div>
-            <input className="grad-slider" type="range" min="0" max="100" value={hsv.v} onChange={(e) => updateHsv({ v: Number(e.target.value) })} style={{ width: "100%", background: valTrackCss }} />
-          </div>
-        </div>
+        )}
 
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: "13px 18px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "transparent", color: "#23262E", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
@@ -2088,14 +2111,8 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
         </button>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--color-primary-border)", borderRadius: 999, padding: "6px 10px" }}>
-            <button onClick={() => onApply({ primary: DEFAULT_PALETTE.primary, accent: DEFAULT_PALETTE.accent })} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: DEFAULT_PALETTE.primary, border: "1px solid rgba(0,0,0,0.15)" }} />
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: DEFAULT_PALETTE.accent, marginLeft: -6, border: "1px solid rgba(0,0,0,0.15)" }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#23262E" }}>Défaut</span>
-            </button>
-          </div>
+      {savedPalettes.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
           {savedPalettes.map((p) => (
             <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 6, border: "1px solid var(--color-primary-border)", borderRadius: 999, padding: "6px 6px 6px 10px" }}>
               <button onClick={() => onApply(p)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", padding: 0 }}>
@@ -2109,6 +2126,7 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
             </div>
           ))}
         </div>
+      )}
 
 
       <button onClick={onReset} style={{ background: "none", border: "none", color: "#9A9887", fontWeight: 600, fontSize: 12.5, cursor: "pointer", padding: 0 }}>
@@ -2120,7 +2138,7 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
 
 // --- App -------------------------------------------------------------------
 
-function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, householdId, isAdmin, optionsOpen, onCloseOptions, onOpenOptions, onOpenFoyer, onOpenAccount }) {
+function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, householdId, isAdmin, optionsOpen, onCloseOptions }) {
   const [tab, setTab] = useState("liste");
   const [query, setQuery] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
@@ -2729,7 +2747,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   }, [visibleList, products]);
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "var(--color-primary)", minHeight: "100vh", color: "#23262E", position: "relative", zIndex: 0 }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: "var(--color-primary)", minHeight: "100vh", color: "#23262E", display: "flex", justifyContent: "center", position: "relative", zIndex: 0 }}>
       <img
         src="./lemon-deco.png"
         alt=""
@@ -2746,20 +2764,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         @media (prefers-reduced-motion: reduce) { .grow-in { animation: none; } }
       `}</style>
 
-      {/* Zone fixe : bannière, icônes, en-tête, onglets, recherche/actions — ne bouge pas au scroll */}
-      <div style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--color-primary)", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", WebkitBackfaceVisibility: "hidden" }}>
-        {/* Bandeau à volants façon auvent de marché */}
-        <div style={{ position: "relative", zIndex: 1, width: "100%", height: 34, backgroundColor: "var(--color-accent)", backgroundImage: "radial-gradient(circle at 12px 34px, transparent 12px, var(--color-accent) 13px)", backgroundSize: "24px 34px", backgroundRepeat: "repeat-x", backgroundPosition: "left top", boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }} />
-        {/* icônes options / foyer / compte, superposées à la bannière */}
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "0 14px", maxWidth: 480, margin: "-14px auto 0", position: "relative", zIndex: 2 }}>
-          <button onClick={onOpenOptions} title="Options" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🛠️</button>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={onOpenFoyer} title="Mon foyer" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🏠</button>
-            <button onClick={onOpenAccount} title="Mon compte" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>👤</button>
-          </div>
-        </div>
-
-      <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", padding: "10px 18px 12px" }}>
+      <div style={{ width: "100%", maxWidth: 480, padding: "26px 18px 100px" }}>
         {!(tab === "recettes" && recipeEditing) && (
           <header style={{ marginBottom: 18 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-accent)", fontSize: 12.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 6 }}>
@@ -2871,56 +2876,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           </div>
         )}
 
-        {tab === "tous" && (
-          <>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-              <button
-                onClick={openNewProductModal}
-                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                <Plus size={16} /> Nouvel article
-              </button>
-              <button
-                onClick={() => setShowCategoryOrder(true)}
-                title="Réorganiser les rayons"
-                style={{ padding: "13px 14px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-              >
-                ↕️
-              </button>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)" }}>
-              <Search size={18} color="#ADAB98" strokeWidth={2.2} />
-              <input
-                value={catalogQuery}
-                onChange={(e) => setCatalogQuery(e.target.value)}
-                placeholder="Filtrer un produit du catalogue…"
-                style={{ background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 15, width: "100%", fontFamily: "inherit" }}
-              />
-              {catalogQuery && (
-                <button onClick={() => setCatalogQuery("")} style={{ background: "none", border: "none", color: "#ADAB98", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {tab === "recettes" && !recipeEditing && (
-          <button
-            onClick={() => setRecipeEditing({})}
-            style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-          >
-            <Plus size={16} /> Nouvelle recette
-          </button>
-        )}
-      </div>
-      </div>
-      {/* fin zone fixe — la suite défile normalement */}
-
-      <div style={{ display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 480, padding: "14px 18px 100px" }}>
-
         {tab === "liste" &&
           (grouped.length === 0 && boughtItems.length === 0 ? (
             <div style={{ textAlign: "center", padding: "48px 16px", color: "#C9C3AE" }}>
@@ -2976,6 +2931,37 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
         {tab === "tous" && (
           <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <button
+                onClick={openNewProductModal}
+                style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+              >
+                <Plus size={16} /> Nouvel article
+              </button>
+              <button
+                onClick={() => setShowCategoryOrder(true)}
+                title="Réorganiser les rayons"
+                style={{ padding: "13px 14px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                ↕️
+              </button>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)", marginBottom: 20 }}>
+              <Search size={18} color="#ADAB98" strokeWidth={2.2} />
+              <input
+                value={catalogQuery}
+                onChange={(e) => setCatalogQuery(e.target.value)}
+                placeholder="Filtrer un produit du catalogue…"
+                style={{ background: "transparent", border: "none", outline: "none", color: "#23262E", fontSize: 15, width: "100%", fontFamily: "inherit" }}
+              />
+              {catalogQuery && (
+                <button onClick={() => setCatalogQuery("")} style={{ background: "none", border: "none", color: "#ADAB98", cursor: "pointer", display: "flex", padding: 2 }} aria-label="Effacer">
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
             {catalogQuery ? (
               catalogFiltered.length === 0 ? (
                 <p style={{ color: "#A8A695", fontSize: 13.5, textAlign: "center", padding: "24px 0" }}>
@@ -3028,6 +3014,13 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             <RecipeEditor draft={recipeEditing} onCancel={() => setRecipeEditing(null)} onSave={saveRecipe} products={products} />
           ) : (
             <>
+              <button
+                onClick={() => setRecipeEditing({})}
+                style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px dashed #D8CFB0", background: "transparent", color: "#7A7968", fontWeight: 600, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 20 }}
+              >
+                <Plus size={16} /> Nouvelle recette
+              </button>
+
               {recipes.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "40px 16px", color: "#C9C3AE" }}>
                   <div style={{ fontSize: 38, marginBottom: 10 }}>📖</div>
@@ -3041,7 +3034,6 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
             </>
           )
         )}
-      </div>
       </div>
 
       {modalProduct && (
@@ -3254,7 +3246,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               </div>
             </div>
 
-            <div style={{ overflowY: "auto", padding: "16px 20px 28px", minHeight: "56vh" }}>
+            <div style={{ overflowY: "auto", padding: "16px 20px 28px" }}>
               {optionsTab === "installation" && (
                 <>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Installer l'application</label>
@@ -3437,7 +3429,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // L'onglet Administrateur (export cloud des prix/articles) n'est visible que pour ce compte.
 // Remplace la valeur ci-dessous par ton UUID Supabase (Dashboard → Authentication → Users).
-const ADMIN_USER_ID = "1a1b0329-81b1-4e69-8198-4ab206defe21";
+const ADMIN_USER_ID = "REPLACE_WITH_YOUR_SUPABASE_USER_UUID";
 
 const emptyData = {
   list: [], recipes: [], customProducts: [], productOverrides: {}, deletedProductIds: [],
@@ -3634,7 +3626,7 @@ function HouseholdScreen({ onCreate, onJoin, error }) {
 
 // --- Modale "Mon compte" -----------------------------------------------------
 
-function AccountModal({ email, userId, pseudo, onClose, onSavePseudo, onLogout }) {
+function AccountModal({ email, pseudo, onClose, onSavePseudo, onLogout }) {
   const [pseudoInput, setPseudoInput] = useState(pseudo || "");
   const [status, setStatus] = useState("");
 
@@ -3653,21 +3645,6 @@ function AccountModal({ email, userId, pseudo, onClose, onSavePseudo, onLogout }
 
         <label style={labelStyle}>Email</label>
         <input style={{ ...fieldStyle, opacity: 0.6 }} value={email} disabled />
-
-        <label style={labelStyle}>Identifiant (UUID)</label>
-        <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
-          <input style={{ ...fieldStyle, margin: 0, opacity: 0.6, fontSize: 12 }} value={userId} disabled />
-          <button
-            onClick={() => navigator.clipboard?.writeText(userId)}
-            title="Copier"
-            style={{ padding: "0 16px", borderRadius: 10, border: "none", background: "var(--color-primary-border)", color: "#23262E", fontWeight: 600, fontSize: 13, cursor: "pointer" }}
-          >
-            Copier
-          </button>
-        </div>
-        <p style={{ fontSize: 11, color: "#ADAB98", margin: "-14px 0 20px", lineHeight: 1.4 }}>
-          Utile pour vérifier l'accès à l'onglet Administrateur — doit correspondre exactement à ADMIN_USER_ID dans le code.
-        </p>
 
         <label style={labelStyle}>Mon pseudo</label>
         <div style={{ display: "flex", gap: 8, marginTop: 8, marginBottom: 20 }}>
@@ -4227,12 +4204,22 @@ function Root() {
         </div>
       )}
 
-      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} householdId={currentHouseholdId} isAdmin={session.user.id === ADMIN_USER_ID} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} onOpenOptions={() => setShowOptions(true)} onOpenFoyer={() => setShowFoyer(true)} onOpenAccount={() => setShowAccount(true)} />
+      {/* Bandeau à volants façon auvent de marché */}
+      <div style={{ height: 40, backgroundImage: "url('data:image/png;base64,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g7Q9Y4y0d5C2Z4yR9g7S9owx0t5B2p4xRto7SNszxkh7B2l7xhhp7yBtzxgj7R2k7RljpL2DtD1jjLR3kLZnjDHqHQw7wL3d8paNc6XOX3T3ljr/1H3jHKnzT903zpE6/9R94xyp80/dN86ROv/UfeMcqfNP3TfOkTr/1H3jHKnzT903zpE6/9R94xyp80/dN86ROv/UfeMcqfNP3TfOkTr/1H3jHKnzT903zjFy/kMPcG+33KXjPelzF909pc89fe94Tfrc0/eO16TPPX3veE363NP3jtekzz1973hN+tzT947XpM89fe94Tfrc0/eO16TPPX3veE363NP3jtekzz1973hN+tzT947XpM89fe94Tfrc0/eO14ye+/AD3Nstf/moWWXeoruXVea9yv5xzCrzXmX/OGaVea+yfxyzyrxX2T+OWWXeq+wfx6wy71X2j2NWmfcq+8cxq8x7lf3jmFXmvcr+ccwq815l/zhmlXmvsn8cs8q8V9k/jlll3qvsH8esMu9V9o9jrpj3JQe4t9s6S8hfW23OoruH1ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rnV5rzaHvK51ea82h7yudXmvNoe8rmr5nzZAe7ttt4y8tGq8xXdta0631X3kbtV57vqPnK36nxX3UfuVp3vqvvI3arzXXUfuVt1vqvuI3erznfVfeRu1fmuuo/crTrfVfeRu1Xnu+o+crfqfFfdR+5Wne+q+8jdqvNddR+5W3W+q+4jd1fO99ID3Ntt3aXc3epzFd01rT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXqc119L3e1+lxX38tdrT7X1fdyV6vPdfW93NXVc738APd2W385d7PLPEV3LbvMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3exyzx32c9d7DLPXfZzF7vMc5f93MUu89xlP3cxY55TDnBvt32WdHW7zVF017DbHHfb01XtNsfd9nRVu81xtz1d1W5z3G1PV7XbHHfb01XtNsfd9nRV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')", backgroundRepeat: "repeat-x", backgroundSize: "auto 40px", backgroundPosition: "left top" }} />
+
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "0 14px", maxWidth: 480, margin: "-20px auto 0", position: "relative", zIndex: 2 }}>
+        <button onClick={() => setShowOptions(true)} title="Options" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🛠️</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => setShowFoyer(true)} title="Mon foyer" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🏠</button>
+          <button onClick={() => setShowAccount(true)} title="Mon compte" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>👤</button>
+        </div>
+      </div>
+
+      <App key={currentHouseholdId} initialData={initialData} remoteData={remoteData} remoteVersion={remoteVersion} onDataChange={handleDataChange} householdName={currentHousehold?.name} householdId={currentHouseholdId} isAdmin={session.user.id === ADMIN_USER_ID} optionsOpen={showOptions} onCloseOptions={() => setShowOptions(false)} />
 
       {showAccount && (
         <AccountModal
           email={session.user.email}
-          userId={session.user.id}
           pseudo={pseudo}
           onClose={() => setShowAccount(false)}
           onSavePseudo={handleSavePseudo}
