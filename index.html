@@ -815,9 +815,10 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
 
 // --- Création / édition d'un article (onglet "Tous les produits") ----------
 
-function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete, customIcons, onAddCustomIcon, onDeleteCustomIcon }) {
+function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete, customIcons, onAddCustomIcon, onDeleteCustomIcon, isAdmin }) {
   const iconImportRef = useRef(null);
   const [name, setName] = useState(product?.name ?? "");
+  const [tag, setTag] = useState(product?.tag ?? product?.name ?? "");
   const [icon, setIcon] = useState(product?.icon ?? ALL_ICONS[0]);
   const [cat, setCat] = useState(product?.cat ?? initialCat ?? CATEGORIES[0].key);
   const [priceUnit, setPriceUnit] = useState(product?.priceUnit != null ? String(product.priceUnit).replace(".", ",") : "");
@@ -863,6 +864,18 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
           placeholder="ex : Sauce chimichurri"
           style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
         />
+
+        {isAdmin && (
+          <>
+            <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Tag <span style={{ opacity: 0.6, fontWeight: 500, textTransform: "none" }}>(admin uniquement)</span></label>
+            <input
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              placeholder="ex : Sauce chimichurri"
+              style={{ width: "100%", marginTop: 8, marginBottom: 20, background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, color: "#23262E", fontSize: 15, padding: "11px 12px", outline: "none", fontFamily: "inherit" }}
+            />
+          </>
+        )}
 
         <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Rayon</label>
         <div style={{ position: "relative", margin: "8px 0 20px" }}>
@@ -1039,6 +1052,7 @@ function ProductEditModal({ mode, product, initialCat, onClose, onSave, onDelete
               const nWeight = weight.trim().replace(",", ".");
               onSave({
                 name: name.trim(),
+                tag: isAdmin ? tag.trim() : (product?.tag ?? undefined),
                 icon,
                 cat,
                 priceUnit: nUnit ? Number(nUnit) : null,
@@ -2293,22 +2307,21 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
   const buildPricesExport = () => {
     const out = {};
+    const today = new Date().toISOString().slice(0, 10);
     products.forEach((p) => {
-      const hasUnit = p.priceUnit != null && p.priceUnit !== "";
-      const hasKg = p.priceKg != null && p.priceKg !== "";
-      if (hasUnit || hasKg) {
-        out[p.id] = {
-          priceUnit: hasUnit ? Number(p.priceUnit) : null,
-          priceKg: hasKg ? Number(p.priceKg) : null,
-          updatedAt: new Date().toISOString().slice(0, 10),
-        };
-      }
+      out[p.id] = {
+        tag: p.tag ?? p.name,
+        id: p.id,
+        priceUnit: p.priceUnit != null && p.priceUnit !== "" ? Number(p.priceUnit) : null,
+        priceKg: p.priceKg != null && p.priceKg !== "" ? Number(p.priceKg) : null,
+        updatedAt: today,
+      };
     });
     return out;
   };
   // Champs communs à "Exporter mes articles personnalisés" et "Exporter tous mes articles" —
   // même format pour les deux, hors prix (gérés séparément par Exporter les prix).
-  const articleFields = (p) => ({ id: p.id, name: p.name, icon: p.icon, cat: p.cat, weight: p.weight ?? null, variants: p.variants ?? [] });
+  const articleFields = (p) => ({ id: p.id, name: p.name, tag: p.tag ?? p.name, icon: p.icon, cat: p.cat, weight: p.weight ?? null, variants: p.variants ?? [] });
   const buildCustomArticlesExport = () => customProducts.map(articleFields);
   const buildAllArticlesExport = () => products.map(articleFields);
 
@@ -2469,8 +2482,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return [...base, ...customs];
   }, [customProducts, productOverrides, deletedProductIds]);
 
-  const addCustomProduct = ({ name, icon, cat, priceUnit, priceKg, weight, variants }) => {
-    const p = { id: `custom-${Date.now()}`, name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null, weight: weight ?? null, variants: variants ?? [] };
+  const addCustomProduct = ({ name, tag, icon, cat, priceUnit, priceKg, weight, variants }) => {
+    const p = { id: `custom-${Date.now()}`, name, tag: tag ?? name, icon, cat, priceUnit: priceUnit ?? null, priceKg: priceKg ?? null, weight: weight ?? null, variants: variants ?? [] };
     setCustomProducts((l) => [...l, p]);
     return p;
   };
@@ -2533,9 +2546,9 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
   const deleteCustomIcon = (dataUrl) => setCustomIcons((list) => list.filter((i) => i !== dataUrl));
 
-  const saveProductModal = ({ name, icon, cat, priceUnit, priceKg, weight, variants }) => {
-    if (productModal.mode === "create") addCustomProduct({ name, icon, cat, priceUnit, priceKg, weight, variants });
-    else editProduct(productModal.product.id, { name, icon, cat, priceUnit, priceKg, weight, variants });
+  const saveProductModal = ({ name, tag, icon, cat, priceUnit, priceKg, weight, variants }) => {
+    if (productModal.mode === "create") addCustomProduct({ name, tag, icon, cat, priceUnit, priceKg, weight, variants });
+    else editProduct(productModal.product.id, { name, tag, icon, cat, priceUnit, priceKg, weight, variants });
     closeProductModal();
   };
   const deleteFromProductModal = () => {
@@ -2748,22 +2761,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
       {/* Zone fixe : bannière, icônes, en-tête, onglets, recherche/actions — ne bouge pas au scroll */}
       <div style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--color-primary)", transform: "translateZ(0)", WebkitTransform: "translateZ(0)", WebkitBackfaceVisibility: "hidden" }}>
-        {/* Bandeau à volants façon auvent de marché */}
-        <div style={{ position: "relative", zIndex: 1, width: "100%", height: 40, overflow: "hidden", display: "flex", boxShadow: "0 2px 6px rgba(0,0,0,0.08)" }}>
-          {Array.from({ length: 60 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 40,
-                height: 40,
-                flexShrink: 0,
-                background: i % 2 === 0 ? "#BDC9A3" : "#EDE6CE",
-                borderBottomLeftRadius: 20,
-                borderBottomRightRadius: 20,
-              }}
-            />
-          ))}
-        </div>
+        {/* Bandeau à volants façon auvent de marché : fond crème plein, cercles sauge découpés dedans
+            (jamais de vide possible, contrairement à des rayures arrondies indépendantes) */}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            width: "100%",
+            height: 40,
+            backgroundColor: "#EDE6CE",
+            backgroundImage: "radial-gradient(circle at 20px 40px, transparent 20px, #BDC9A3 21px)",
+            backgroundSize: "40px 40px",
+            backgroundRepeat: "repeat-x",
+            backgroundPosition: "left top",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.08)",
+          }}
+        />
         {/* icônes options / foyer / compte, superposées à la bannière */}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 6, padding: "0 14px", maxWidth: 480, margin: "-20px auto 0", position: "relative", zIndex: 2 }}>
           <button onClick={onOpenOptions} title="Options" style={{ background: "#FFFFFF", border: "none", borderRadius: "50%", width: 42, height: 42, color: "var(--color-accent)", cursor: "pointer", fontSize: 16, boxShadow: "0 4px 14px rgba(35,38,46,0.12)" }}>🛠️</button>
@@ -3078,6 +3091,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           customIcons={customIcons}
           onAddCustomIcon={addCustomIcon}
           onDeleteCustomIcon={deleteCustomIcon}
+          isAdmin={isAdmin}
         />
       )}
 
