@@ -790,16 +790,16 @@ function ItemCard({ item, product, onEdit, onQuickTap, small }) {
       onPointerCancel={clearPress}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: bought ? "#EFEDE2" : c.tint, border: `1px solid ${bought ? "var(--color-primary-border)" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
+      style={{ background: bought ? "#EFEDE2" : c.tint, border: `1px solid ${bought ? "var(--color-primary-border)" : c.accent + "33"}`, borderRadius: 16, padding: small ? "12px 6px 9px" : "16px 8px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, minHeight: small ? 78 : 96, width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", userSelect: "none", cursor: "pointer", opacity: bought ? 0.55 : 1 }}
     >
       {item.fromRecipe && (
-        <span style={{ display: "flex", alignItems: "center", gap: 3, maxWidth: "100%", color: bought ? "#A8A695" : "var(--color-accent-dark)", marginBottom: -2 }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 3, maxWidth: "100%", minWidth: 0, color: bought ? "#A8A695" : "var(--color-accent-dark)", marginBottom: -2 }}>
           <BookOpen size={9} strokeWidth={2.4} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: 8.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.02em" }}>{item.fromRecipe}</span>
+          <span style={{ fontSize: 8.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.02em", minWidth: 0 }}>{item.fromRecipe}</span>
         </span>
       )}
       <span style={{ fontSize: small ? 21 : 26, filter: bought ? "grayscale(1)" : "none" }}><IconGlyph icon={product.icon} size={small ? 21 : 26} /></span>
-      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: bought ? "#9A9887" : "#23262E", textDecoration: bought ? "line-through" : "none" }}>
+      <span style={{ fontSize: small ? 11 : 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: bought ? "#9A9887" : "#23262E", textDecoration: bought ? "line-through" : "none", maxWidth: "100%", wordBreak: "break-word", overflowWrap: "break-word" }}>
         {product.name}
         {item.note && <span style={{ color: bought ? "#9A9887" : c.accent }}> · {item.note}</span>}
       </span>
@@ -1094,10 +1094,10 @@ function ProductTile({ product, cat, inList, onTap, onLongPress }) {
       onPointerCancel={clear}
       onClick={handleClick}
       onContextMenu={(e) => e.preventDefault()}
-      style={{ background: inList ? "var(--color-accent-tint)" : cat.tint, border: `1px solid ${inList ? "var(--color-accent)" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer", userSelect: "none" }}
+      style={{ background: inList ? "var(--color-accent-tint)" : cat.tint, border: `1px solid ${inList ? "var(--color-accent)" : cat.accent + "33"}`, borderRadius: 14, padding: "14px 6px 12px", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: "100%", minWidth: 0, maxWidth: "100%", boxSizing: "border-box", cursor: "pointer", userSelect: "none" }}
     >
       <span style={{ fontSize: 25 }}><IconGlyph icon={product.icon} size={25} /></span>
-      <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "var(--color-accent-dark)" : "#23262E" }}>{product.name}</span>
+      <span style={{ fontSize: 12.5, fontWeight: 600, textAlign: "center", lineHeight: 1.25, color: inList ? "var(--color-accent-dark)" : "#23262E", maxWidth: "100%", wordBreak: "break-word", overflowWrap: "break-word" }}>{product.name}</span>
       {formatProductPrice(product) && (
         <span style={{ fontSize: 10.5, fontWeight: 700, color: inList ? "var(--color-accent)" : cat.accent }}>{formatProductPrice(product)}</span>
       )}
@@ -2794,7 +2794,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
               {householdName || "Foyer"}
             </div>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
-              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 32, margin: 0, letterSpacing: "-0.01em" }}>
+              <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 32, margin: 0, letterSpacing: "-0.01em", flex: 1, minWidth: 0, wordBreak: "break-word", overflowWrap: "break-word" }}>
                 {tab === "liste" ? (activeList?.name || "Ma liste") : tab === "tous" ? "Tous les produits" : "Recettes"}
               </h1>
               {tab === "liste" && (
