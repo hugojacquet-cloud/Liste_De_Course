@@ -19,7 +19,25 @@
 </style>
 <script>
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      // Vérifie s'il existe une nouvelle version dès l'ouverture, puis régulièrement tant que
+      // l'app reste ouverte (une PWA peut rester active des heures sans jamais recharger).
+      reg.update().catch(() => {});
+      setInterval(() => reg.update().catch(() => {}), 60000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+    });
+  });
+  // sw.js appelle déjà skipWaiting() + clients.claim() : dès qu'une nouvelle version prend le
+  // contrôle de l'onglet (après déploiement), on recharge la page automatiquement une seule fois.
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    window.location.reload();
+  });
 }
 window.addEventListener('error', function (e) {
   var el = document.getElementById('boot-error');
@@ -3943,6 +3961,7 @@ function Root() {
   const [myHouseholds, setMyHouseholds] = useState([]);
   const [currentHouseholdId, setCurrentHouseholdId] = useState(null);
   const [householdsReady, setHouseholdsReady] = useState(false);
+  const [householdsLoadError, setHouseholdsLoadError] = useState(false);
   const [pseudo, setPseudo] = useState("");
   const [profiles, setProfiles] = useState([]);
   const [initialData, setInitialData] = useState(null);
@@ -3959,13 +3978,37 @@ function Root() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const loadMyHouseholds = async (uid) => {
-    const { data: memberships } = await sb.from("courses_household_members").select("household_id").eq("user_id", uid);
+  const cacheHouseholdsList = (list) => {
+    try { localStorage.setItem("courses_cached_households", JSON.stringify(list)); } catch (e) {}
+  };
+  const getCachedHouseholdsList = () => {
+    try { return JSON.parse(localStorage.getItem("courses_cached_households")) || null; } catch (e) { return null; }
+  };
+
+  // Quelques tentatives avec un court délai avant d'abandonner : évite qu'un simple accroc réseau
+  // (retour d'arrière-plan, wifi qui se reconnecte...) ne soit interprété à tort comme "aucun foyer".
+  const loadMyHouseholds = async (uid, attempt = 0) => {
+    const { data: memberships, error } = await sb.from("courses_household_members").select("household_id").eq("user_id", uid);
+    if (error) {
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return loadMyHouseholds(uid, attempt + 1);
+      }
+      throw error;
+    }
     const ids = (memberships || []).map((m) => m.household_id);
-    if (!ids.length) { setMyHouseholds([]); return []; }
-    const { data: households } = await sb.from("courses_households").select("id, name").in("id", ids);
+    if (!ids.length) { setMyHouseholds([]); cacheHouseholdsList([]); return []; }
+    const { data: households, error: err2 } = await sb.from("courses_households").select("id, name").in("id", ids);
+    if (err2) {
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+        return loadMyHouseholds(uid, attempt + 1);
+      }
+      throw err2;
+    }
     const list = (households || []).map((h) => ({ id: h.id, name: h.name || "Foyer" }));
     setMyHouseholds(list);
+    cacheHouseholdsList(list);
     return list;
   };
 
@@ -3985,14 +4028,15 @@ function Root() {
     setProfiles(rows || []);
   };
 
-  // Détermine le foyer actif après connexion : lien d'invitation > foyer mémorisé > premier disponible
-  useEffect(() => {
+  // Détermine le foyer actif après connexion : lien d'invitation > foyer mémorisé > premier disponible.
+  // En cas d'échec réseau persistant (après les tentatives ci-dessus), on retombe sur la dernière
+  // liste de foyers connue localement plutôt que d'afficher à tort l'écran "créer un foyer".
+  const attemptLoadHouseholds = async () => {
     if (!session) return;
-    let cancelled = false;
-    (async () => {
-      const uid = session.user.id;
+    const uid = session.user.id;
+    setHouseholdsLoadError(false);
+    try {
       const households = await loadMyHouseholds(uid);
-      if (cancelled) return;
       if (!households.length) {
         setCurrentHouseholdId(null);
         setHouseholdsReady(true);
@@ -4004,8 +4048,25 @@ function Root() {
       setStoredHouseholdId(active);
       setCurrentHouseholdId(active);
       setHouseholdsReady(true);
-    })();
-    return () => { cancelled = true; };
+    } catch (e) {
+      const cached = getCachedHouseholdsList();
+      if (cached && cached.length) {
+        setMyHouseholds(cached);
+        const stored = getStoredHouseholdId();
+        const match = cached.find((h) => h.id === stored);
+        const active = match ? match.id : cached[0].id;
+        setCurrentHouseholdId(active);
+        setHouseholdsReady(true);
+      } else {
+        setHouseholdsLoadError(true);
+        setHouseholdsReady(true);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!session) return;
+    attemptLoadHouseholds();
   }, [session?.user?.id]);
 
   // Pseudo global de l'utilisateur (indépendant du foyer)
@@ -4237,6 +4298,24 @@ function Root() {
   }
   if (!householdsReady) {
     return <div style={{ background: "var(--color-primary)", minHeight: "100vh", color: "#ADAB98", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>Chargement…</div>;
+  }
+  if (householdsLoadError) {
+    return (
+      <div style={{ background: "var(--color-primary)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div style={{ textAlign: "center", maxWidth: 320 }}>
+          <div style={{ fontSize: 34, marginBottom: 12 }}>📡</div>
+          <p style={{ color: "#7A7968", fontSize: 14, lineHeight: 1.6, margin: "0 0 18px" }}>
+            Impossible de contacter le serveur pour récupérer ton foyer. Vérifie ta connexion puis réessaie.
+          </p>
+          <button
+            onClick={() => { setHouseholdsReady(false); attemptLoadHouseholds(); }}
+            style={{ padding: "12px 22px", borderRadius: 12, border: "none", background: "var(--color-accent)", color: "var(--color-primary)", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
   }
   if (!currentHouseholdId) {
     return <HouseholdScreen onCreate={handleCreateHousehold} onJoin={handleJoinHousehold} error={householdError} />;
