@@ -1630,6 +1630,147 @@ function ExportChoiceModal({ title, onClose, onLocal, onCloud, busy }) {
   );
 }
 
+// --- Aperçu d'import de catalogue : mises à jour détectées + nouveaux produits sélectionnables -
+
+function ImportReviewModal({ diff, onClose, onApply }) {
+  const { updates, newOnes } = diff;
+  const [selectedNew, setSelectedNew] = useState(() => new Set());
+  const toggleNew = (id) => setSelectedNew((s) => { const next = new Set(s); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  const selectAllNew = () => setSelectedNew(new Set(newOnes.map((n) => n.id)));
+  const hasNothing = updates.length === 0 && newOnes.length === 0;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(10,12,15,0.6)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 96 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 480, maxHeight: "85vh", display: "flex", flexDirection: "column", background: "#FFFFFF", borderTop: "1px solid var(--color-primary-border)", borderRadius: "20px 20px 0 0" }}
+      >
+        <div style={{ padding: "20px 20px 4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: 17, fontWeight: 700 }}>Aperçu de l'import</div>
+          <button onClick={onClose} style={{ background: "var(--color-primary-border)", border: "none", borderRadius: "50%", width: 30, height: 30, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ overflowY: "auto", padding: "14px 20px 4px" }}>
+          {hasNothing && (
+            <p style={{ color: "#A8A695", fontSize: 13.5, textAlign: "center", padding: "30px 0" }}>
+              Rien de nouveau à importer — ton catalogue est déjà à jour.
+            </p>
+          )}
+
+          {updates.length > 0 && (
+            <section style={{ marginBottom: 22 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 10 }}>
+                Mises à jour ({updates.length})
+              </div>
+              {updates.map((u) => {
+                const c = catInfo(u.oldCat) || CATEGORIES[0];
+                return (
+                  <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid var(--color-primary-border)" }}>
+                    <span style={{ width: 28, height: 28, borderRadius: 8, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <IconGlyph icon={u.icon} size={14} />
+                    </span>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#23262E" }}>{u.name}</span>
+                    <div style={{ textAlign: "right" }}>
+                      {u.priceChanged && (
+                        <div style={{ fontSize: 12 }}>
+                          {u.raw.priceUnit != null && (
+                            <div>
+                              {u.oldPriceUnit != null && <span style={{ color: "#ADAB98", textDecoration: "line-through", marginRight: 4 }}>{formatEuro(Number(u.oldPriceUnit))}</span>}
+                              <span style={{ color: "#3FA184", fontWeight: 700 }}>{formatEuro(Number(u.raw.priceUnit))}</span>
+                              <span style={{ color: "#ADAB98" }}>/paquet</span>
+                            </div>
+                          )}
+                          {u.raw.priceKg != null && (
+                            <div>
+                              {u.oldPriceKg != null && <span style={{ color: "#ADAB98", textDecoration: "line-through", marginRight: 4 }}>{formatEuro(Number(u.oldPriceKg))}</span>}
+                              <span style={{ color: "#3FA184", fontWeight: 700 }}>{formatEuro(Number(u.raw.priceKg))}</span>
+                              <span style={{ color: "#ADAB98" }}>/kg</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {u.catChanged && (
+                        <div style={{ fontSize: 11, color: "#3FA184", fontWeight: 600, marginTop: 2 }}>
+                          {(catInfo(u.oldCat) || {}).label} → {(catInfo(u.newCat) || {}).label}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          )}
+
+          {newOnes.length > 0 && (
+            <section style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  Nouveaux produits ({newOnes.length})
+                </div>
+                <button onClick={selectAllNew} style={{ marginLeft: "auto", background: "none", border: "none", color: "var(--color-accent)", fontWeight: 700, fontSize: 12.5, cursor: "pointer" }}>
+                  Tout ajouter
+                </button>
+              </div>
+              {newOnes.map((n) => {
+                const c = catInfo(n.cat) || CATEGORIES[0];
+                const checked = selectedNew.has(n.id);
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => toggleNew(n.id)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 10px", marginBottom: 6, borderRadius: 12, border: `1px solid ${checked ? c.accent : "var(--color-primary-border)"}`, background: checked ? c.accent + "1A" : "transparent", cursor: "pointer", textAlign: "left" }}
+                  >
+                    <span style={{ width: 32, height: 32, borderRadius: 9, background: c.accent + "26", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <IconGlyph icon={n.icon} size={16} />
+                    </span>
+                    <span style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500, color: "#23262E" }}>{n.name}</div>
+                      <div style={{ fontSize: 11.5, color: "#9A9887" }}>{c.label}{formatProductPrice(n) ? ` · ${formatProductPrice(n)}` : ""}</div>
+                    </span>
+                    <span
+                      style={{
+                        width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                        border: `1.5px solid ${checked ? c.accent : "#D8CFB0"}`,
+                        background: checked ? c.accent : "transparent",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}
+                    >
+                      {checked && <Check size={13} color="var(--color-primary)" strokeWidth={3} />}
+                    </span>
+                  </button>
+                );
+              })}
+            </section>
+          )}
+        </div>
+
+        <div style={{ padding: "14px 20px", borderTop: "1px solid var(--color-primary-border)", flexShrink: 0, background: "#FFFFFF" }}>
+          {hasNothing ? (
+            <button
+              onClick={onClose}
+              style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "none", background: "var(--color-accent)", color: "var(--color-primary)", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+            >
+              Fermer
+            </button>
+          ) : (
+            <button
+              onClick={() => onApply(selectedNew)}
+              style={{ width: "100%", padding: "13px 18px", borderRadius: 12, border: "none", background: "var(--color-accent)", color: "var(--color-primary)", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+            >
+              Confirmer l'import
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Réorganisation des rayons (impacte "Tous les produits" ET "Ma liste") --
 
 function CategoryOrderModal({ orderedKeys, onClose, onMove }) {
@@ -2202,7 +2343,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [viewingCard, setViewingCard] = useState(null); // carte affichée en grand (code-barres)
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [optionsTab, setOptionsTab] = useState("installation");
-  const [exportChoice, setExportChoice] = useState(null); // null | "prices" | "articles"
+  const [exportChoice, setExportChoice] = useState(false); // false | true — export du catalogue en cours
   const [androidInstalled, setAndroidInstalled] = useState(false);
 
   // Palette de couleurs — réglage purement local à cet appareil/utilisateur, jamais synchronisé
@@ -2253,8 +2394,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     if (outcome === "accepted") setAndroidInstalled(true);
     deferredInstallPrompt = null;
   };
-  const priceImportRef = useRef(null);
-  const articlesImportRef = useRef(null);
+  const catalogImportRef = useRef(null);
+  const [importDiff, setImportDiff] = useState(null); // null | { updates, newOnes } — aperçu avant application
   const inputRef = useRef(null);
   const lastAppliedRemoteVersion = useRef(0);
 
@@ -2323,31 +2464,30 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     URL.revokeObjectURL(url);
   };
 
-  const buildPricesExport = () => {
-    const out = {};
+  // Export unique du catalogue complet : un seul fichier contenant tous les produits (base +
+  // personnalisés) avec toutes leurs infos (nom, tag, icône, rayon, prix, poids, sous-produits).
+  // C'est aussi le format attendu à l'import (voir buildImportDiff plus bas).
+  const buildFullCatalogExport = () => {
     const today = new Date().toISOString().slice(0, 10);
-    products.forEach((p) => {
-      out[p.id] = {
-        tag: p.tag ?? p.name,
-        id: p.id,
-        priceUnit: p.priceUnit != null && p.priceUnit !== "" ? Number(p.priceUnit) : null,
-        priceKg: p.priceKg != null && p.priceKg !== "" ? Number(p.priceKg) : null,
-        updatedAt: today,
-      };
-    });
-    return out;
+    return products.map((p) => ({
+      id: p.id,
+      name: p.name,
+      tag: p.tag ?? p.name,
+      icon: p.icon,
+      cat: p.cat,
+      priceUnit: p.priceUnit != null && p.priceUnit !== "" ? Number(p.priceUnit) : null,
+      priceKg: p.priceKg != null && p.priceKg !== "" ? Number(p.priceKg) : null,
+      weight: p.weight ?? null,
+      variants: p.variants ?? [],
+      updatedAt: today,
+    }));
   };
-  // Champs communs à "Exporter mes articles personnalisés" et "Exporter tous mes articles" —
-  // même format pour les deux, hors prix (gérés séparément par Exporter les prix).
-  const articleFields = (p) => ({ id: p.id, name: p.name, tag: p.tag ?? p.name, icon: p.icon, cat: p.cat, weight: p.weight ?? null, variants: p.variants ?? [] });
-  const buildCustomArticlesExport = () => customProducts.map(articleFields);
-  const buildAllArticlesExport = () => products.map(articleFields);
 
-  // Sauvegarde/lecture cloud : stockées directement dans la ligne courses_data du foyer
-  // (colonnes price_backup / articles_backup — nécessite la migration Supabase indiquée).
   // Sauvegarde/lecture cloud GLOBALE (une seule pour toute l'appli, pas par foyer) : ligne fixe
-  // "main" dans courses_global_backup. L'écriture est réservée à l'administrateur côté Supabase
-  // (policy RLS), la lecture est ouverte à tous les utilisateurs connectés.
+  // "main" dans courses_global_backup, colonne price_backup (réutilisée pour stocker désormais
+  // le catalogue complet, pas seulement les prix — aucune migration Supabase nécessaire).
+  // L'écriture est réservée à l'administrateur côté Supabase (policy RLS), la lecture est ouverte
+  // à tous les utilisateurs connectés.
   const saveCloudBackup = async (column, data) => {
     setCloudBusy(true);
     const { error } = await sb.from("courses_global_backup").update({ [column]: data, [column + "_at"]: new Date().toISOString() }).eq("id", "main");
@@ -2362,129 +2502,107 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return data[column] ?? null;
   };
 
-  const exportPrices = async (dest) => {
-    const out = buildPricesExport();
+  const exportCatalog = async (dest) => {
+    const out = buildFullCatalogExport();
     if (dest === "cloud") {
       const ok = await saveCloudBackup("price_backup", out);
-      setCloudMessage(ok ? "☁️ Prix sauvegardés dans le cloud" : "❌ Échec de la sauvegarde cloud");
+      setCloudMessage(ok ? "☁️ Catalogue sauvegardé dans le cloud" : "❌ Échec de la sauvegarde cloud");
     } else {
-      downloadJson("prix.json", out);
+      downloadJson("catalogue.json", out);
     }
   };
-  const exportCustomProducts = async (dest) => {
-    const out = buildCustomArticlesExport();
-    if (dest === "cloud") {
-      const ok = await saveCloudBackup("articles_backup", out);
-      setCloudMessage(ok ? "☁️ Articles personnalisés sauvegardés dans le cloud" : "❌ Échec de la sauvegarde cloud");
-    } else {
-      downloadJson("articles_personnalises.json", out);
-    }
-  };
-  const exportAllArticles = () => downloadJson("tous_les_articles.json", buildAllArticlesExport());
 
-  const pullPriceUpdate = async () => {
-    const data = await loadCloudBackup("price_backup");
-    if (!data) { setCloudMessage("Aucune sauvegarde de prix trouvée dans le cloud."); return; }
-    applyPriceData(data);
-    setCloudMessage("✓ Prix mis à jour depuis le cloud");
+  // Accepte le nouveau format (tableau d'objets) et l'ancien format prix.json (objet { id: {...} })
+  // pour rester compatible avec d'anciens fichiers déjà exportés.
+  const normalizeImportPayload = (raw) => {
+    let arr;
+    if (Array.isArray(raw)) arr = raw;
+    else if (raw && typeof raw === "object") arr = Object.values(raw);
+    else arr = [];
+    return arr.filter((x) => x && x.id);
   };
-  const pullArticlesUpdate = async () => {
-    const data = await loadCloudBackup("articles_backup");
-    if (!data) { setCloudMessage("Aucune sauvegarde d'articles trouvée dans le cloud."); return; }
-    applyArticlesData(data);
-    setCloudMessage("✓ Articles mis à jour depuis le cloud");
+  const numOrNull = (v) => (v == null || v === "" ? null : Number(v));
+  const priceDiffers = (a, b) => {
+    const na = numOrNull(a), nb = numOrNull(b);
+    if (na == null && nb == null) return false;
+    if (na == null || nb == null) return true;
+    return Math.abs(na - nb) > 0.0001;
   };
 
-
-  // Importe un fichier de prix (ancien ou nouveau format) et l'applique comme overrides.
-  // Import ponctuel : une fois fait, ces prix vivent dans productOverrides et se synchronisent
-  // normalement avec le reste du foyer, sans dépendre d'un fichier séparé.
-  // Applique un objet de prix { id: {priceUnit, priceKg} } — réutilisé par l'import local (fichier)
-  // et par la mise à jour depuis la sauvegarde cloud.
-  const applyPriceData = (data) => {
-    const customIds = new Set(customProducts.map((p) => p.id));
-    const forCustom = {};
-    const forBase = {};
-    Object.keys(data || {}).forEach((id) => {
-      const entry = data[id];
-      if (!entry) return;
-      const priced = entry.priceKg !== undefined || typeof entry.priceUnit === "number"
-        ? entry
-        : entry.price != null
-          ? (entry.priceUnit === "kg" ? { priceKg: entry.price } : { priceUnit: entry.price })
-          : null;
-      if (!priced) return;
-      // On se base sur l'appartenance réelle à customProducts, pas sur le préfixe de l'id : un
-      // article personnalisé intégré depuis au catalogue de base garde son id d'origine (souvent
-      // "custom-...") mais doit désormais recevoir son prix comme un article de base (override).
-      if (customIds.has(id)) forCustom[id] = priced;
-      else forBase[id] = priced;
+  // Compare un catalogue importé (fichier local ou sauvegarde cloud) à l'état actuel, et construit
+  // deux listes distinctes :
+  // - updates : produits déjà connus dont le prix et/ou le rayon a changé (rien si aucun changement)
+  // - newOnes : produits absents du catalogue actuel, avec assez d'infos (nom/icône/rayon) pour être créés
+  const buildImportDiff = (raw) => {
+    const items = normalizeImportPayload(raw);
+    const byId = new Map(products.map((p) => [p.id, p]));
+    const updates = [];
+    const newOnes = [];
+    items.forEach((it) => {
+      const existing = byId.get(it.id);
+      if (existing) {
+        const priceChanged = priceDiffers(it.priceUnit, existing.priceUnit) || priceDiffers(it.priceKg, existing.priceKg);
+        const catChanged = !!it.cat && it.cat !== existing.cat;
+        if (priceChanged || catChanged) {
+          updates.push({
+            id: it.id, name: existing.name, icon: existing.icon,
+            oldPriceUnit: existing.priceUnit, oldPriceKg: existing.priceKg,
+            oldCat: existing.cat, newCat: it.cat,
+            priceChanged, catChanged, raw: it,
+          });
+        }
+        // Sinon (import identique à l'existant) : rien à afficher, comme demandé.
+      } else if (it.name && it.icon && it.cat) {
+        // Assez d'infos pour proposer sa création ; un simple fichier de prix historique sans
+        // nom/icône/rayon ne peut pas créer de nouveau produit, il est silencieusement ignoré.
+        newOnes.push(it);
+      }
     });
-    // Articles personnalisés : le prix importé s'applique directement sur l'article, jamais via
-    // un override — sinon il pourrait un jour masquer une modification faite depuis l'appli
-    // (c'est exactement ce qui causait le bug "le prix ne s'enregistre pas").
-    if (Object.keys(forCustom).length) {
-      setCustomProducts((l) => l.map((p) => (forCustom[p.id] ? { ...p, ...forCustom[p.id] } : p)));
-      setProductOverrides((prev) => {
-        const next = { ...prev };
-        Object.keys(forCustom).forEach((id) => { delete next[id]; });
-        return next;
-      });
-    }
-    // Articles du catalogue de base : comportement inchangé, prix appliqué en override.
-    if (Object.keys(forBase).length) {
-      setProductOverrides((prev) => {
-        const next = { ...prev };
-        Object.keys(forBase).forEach((id) => { next[id] = { ...(next[id] || {}), ...forBase[id] }; });
-        return next;
-      });
-    }
+    return { updates, newOnes };
   };
 
-  const importPrices = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      let data;
-      try { data = JSON.parse(e.target.result); } catch (err) { return; }
-      applyPriceData(data);
-    };
-    reader.readAsText(file);
-  };
-
-  // Fusionne des articles importés (venant du fichier local ou du cloud) dans customProducts.
-  // Règle demandée : l'article importé gagne toujours en cas de conflit d'id, jamais de doublon,
-  // et un id déjà intégré au catalogue de base est ignoré (rien à faire, il existe déjà).
-  const applyArticlesData = (list) => {
-    if (!Array.isArray(list) || !list.length) return;
-    const baseIds = new Set(PRODUCTS.map((p) => p.id));
-    const toApply = list.filter((a) => a && a.id && !baseIds.has(a.id));
-    if (!toApply.length) return;
-    setCustomProducts((prev) => {
-      const byId = new Map(prev.map((p) => [p.id, p]));
-      toApply.forEach((a) => {
-        byId.set(a.id, {
-          ...(byId.get(a.id) || {}),
-          id: a.id,
-          name: a.name,
-          icon: a.icon,
-          cat: a.cat,
-          weight: a.weight ?? null,
-          variants: a.variants ?? [],
+  // Applique un aperçu d'import validé par l'utilisateur : toutes les mises à jour de prix/rayon,
+  // et uniquement les nouveaux produits sélectionnés.
+  const applyImportDiff = (updates, selectedNewIds, newOnesList) => {
+    updates.forEach((u) => {
+      const patch = {};
+      if (u.priceChanged) {
+        if (u.raw.priceUnit !== undefined) patch.priceUnit = numOrNull(u.raw.priceUnit);
+        if (u.raw.priceKg !== undefined) patch.priceKg = numOrNull(u.raw.priceKg);
+      }
+      if (u.catChanged) patch.cat = u.raw.cat;
+      editProduct(u.id, patch);
+    });
+    const toAdd = newOnesList.filter((n) => selectedNewIds.has(n.id));
+    if (toAdd.length) {
+      setCustomProducts((prev) => {
+        const byId = new Map(prev.map((p) => [p.id, p]));
+        toAdd.forEach((n) => {
+          byId.set(n.id, {
+            id: n.id, name: n.name, tag: n.tag ?? n.name, icon: n.icon, cat: n.cat,
+            priceUnit: n.priceUnit ?? null, priceKg: n.priceKg ?? null, weight: n.weight ?? null, variants: n.variants ?? [],
+          });
         });
+        return [...byId.values()];
       });
-      return [...byId.values()];
-    });
+    }
   };
-  const importArticles = (file) => {
+
+  const handleCatalogFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       let data;
       try { data = JSON.parse(e.target.result); } catch (err) { return; }
-      applyArticlesData(data);
+      setImportDiff(buildImportDiff(data));
     };
     reader.readAsText(file);
   };
 
+  const pullCatalogFromCloud = async () => {
+    const data = await loadCloudBackup("price_backup");
+    if (!data) { setCloudMessage("Aucune sauvegarde trouvée dans le cloud."); return; }
+    setImportDiff(buildImportDiff(data));
+  };
 
   // Base + articles personnalisés, avec overrides manuels (prix, nom, icône, rayon) et suppressions appliqués.
   const products = useMemo(() => {
@@ -2825,23 +2943,28 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 </button>
               )}
             </div>
-            {tab === "liste" && (
-              <p style={{ color: "#ADAB98", fontSize: 14, margin: "6px 0 0" }}>
-                {totalCount === 0
-                  ? "Aucun article pour l'instant"
-                  : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
-              </p>
-            )}
-            {tab === "liste" && estimatedTotal != null && (
-              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 700, margin: "6px 0 0", color: estimatedTotal < 70 ? "var(--color-accent)" : "#D9614F" }}>
-                <span style={{ opacity: 0.6, fontSize: 20 }}>≈</span> {formatEuro(estimatedTotal)}
-              </p>
-            )}
-            {tab === "recettes" && (
-              <p style={{ color: "#ADAB98", fontSize: 14, margin: "4px 0 0" }}>
-                {recipes.length === 0 ? "Aucune recette enregistrée" : `${recipes.length} recette${recipes.length > 1 ? "s" : ""}`}
-              </p>
-            )}
+            {/* Hauteur réservée constante quel que soit l'onglet, pour éviter que le contenu
+                en dessous ne "saute" en changeant d'onglet (liste peut afficher 2 lignes, les
+                autres onglets 0 ou 1 seule). */}
+            <div style={{ minHeight: 68 }}>
+              {tab === "liste" && (
+                <p style={{ color: "#ADAB98", fontSize: 14, margin: "6px 0 0" }}>
+                  {totalCount === 0
+                    ? "Aucun article pour l'instant"
+                    : `${totalCount} article${totalCount > 1 ? "s" : ""} dans ${grouped.length} rayon${grouped.length > 1 ? "s" : ""}`}
+                </p>
+              )}
+              {tab === "liste" && estimatedTotal != null && (
+                <p style={{ fontFamily: "'Fraunces', serif", fontSize: 28, fontWeight: 700, margin: "6px 0 0", color: estimatedTotal < 70 ? "var(--color-accent)" : "#D9614F" }}>
+                  <span style={{ opacity: 0.6, fontSize: 20 }}>≈</span> {formatEuro(estimatedTotal)}
+                </p>
+              )}
+              {tab === "recettes" && (
+                <p style={{ color: "#ADAB98", fontSize: 14, margin: "6px 0 0" }}>
+                  {recipes.length === 0 ? "Aucune recette enregistrée" : `${recipes.length} recette${recipes.length > 1 ? "s" : ""}`}
+                </p>
+              )}
+            </div>
           </header>
         )}
 
@@ -2864,6 +2987,10 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           </div>
         )}
 
+        {/* Hauteur réservée constante pour cette zone d'actions (recherche / boutons catalogue /
+            nouvelle recette), sinon la zone défilante en dessous "saute" en changeant d'onglet. */}
+        {!(tab === "recettes" && recipeEditing) && (
+        <div style={{ minHeight: 108 }}>
         {tab === "liste" && (
           <div style={{ position: "relative", marginBottom: 26 }}>
             <div style={{ display: "flex", alignItems: "center", background: "#FFFFFF", border: "none", borderRadius: 18, padding: "14px 16px", gap: 10, boxShadow: "0 4px 14px rgba(35,38,46,0.06)" }}>
@@ -2958,6 +3085,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           >
             <Plus size={16} /> Nouvelle recette
           </button>
+        )}
+        </div>
         )}
       </div>
       </div>
@@ -3208,11 +3337,23 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
 
       {exportChoice && (
         <ExportChoiceModal
-          title={exportChoice === "prices" ? "Exporter les prix" : "Exporter mes articles personnalisés"}
+          title="Exporter le catalogue"
           busy={cloudBusy}
-          onClose={() => setExportChoice(null)}
-          onLocal={() => { exportChoice === "prices" ? exportPrices("local") : exportCustomProducts("local"); setExportChoice(null); }}
-          onCloud={async () => { await (exportChoice === "prices" ? exportPrices("cloud") : exportCustomProducts("cloud")); setExportChoice(null); }}
+          onClose={() => setExportChoice(false)}
+          onLocal={() => { exportCatalog("local"); setExportChoice(false); }}
+          onCloud={async () => { await exportCatalog("cloud"); setExportChoice(false); }}
+        />
+      )}
+
+      {importDiff && (
+        <ImportReviewModal
+          diff={importDiff}
+          onClose={() => setImportDiff(null)}
+          onApply={(selectedNewIds) => {
+            applyImportDiff(importDiff.updates, selectedNewIds, importDiff.newOnes);
+            setImportDiff(null);
+            setCloudMessage("✓ Import appliqué");
+          }}
         />
       )}
 
@@ -3342,91 +3483,55 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 <>
                   <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Récupérer depuis le cloud</label>
                   <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 14px", lineHeight: 1.4 }}>
-                    Récupère la dernière sauvegarde cloud (unique pour toute l'appli, faite par l'administrateur depuis l'onglet Admin → Export cloud).
+                    Récupère la dernière sauvegarde cloud (unique pour toute l'appli, faite par l'administrateur depuis l'onglet Admin). Un aperçu s'affiche avant toute application.
                   </p>
                   <button
                     disabled={cloudBusy}
-                    onClick={pullPriceUpdate}
-                    style={{ width: "100%", marginBottom: 10, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: cloudBusy ? "default" : "pointer" }}
-                  >
-                    ☁️ Mise à jour de prix
-                  </button>
-                  <button
-                    disabled={cloudBusy}
-                    onClick={pullArticlesUpdate}
+                    onClick={pullCatalogFromCloud}
                     style={{ width: "100%", padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: cloudBusy ? "default" : "pointer" }}
                   >
-                    ☁️ Mise à jour des articles
+                    ☁️ Récupérer le catalogue
                   </button>
                   <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "10px 0 0", lineHeight: 1.4 }}>
-                    Sans risque de doublon : un article importé remplace toujours la version existante en cas de conflit d'id, et les articles déjà présents dans le catalogue de base sont ignorés.
+                    Sans risque de doublon : tu choisis quels nouveaux produits ajouter, et les produits déjà identiques ne sont pas listés.
                   </p>
                 </>
               )}
 
               {optionsTab === "admin" && isAdmin && (
                 <>
-                  <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Prix</label>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Catalogue</label>
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button
-                      onClick={() => setExportChoice("prices")}
-                      title="Exporter les prix actuels (local ou cloud)"
+                      onClick={() => setExportChoice(true)}
+                      title="Exporter tout le catalogue actuel (local ou cloud) : nom, tag, icône, rayon, prix, poids, sous-produits"
                       style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
                     >
-                      Exporter les prix
+                      Exporter le catalogue
                     </button>
                     <button
-                      onClick={() => priceImportRef.current?.click()}
-                      title="Importer un fichier de prix — appliqué une fois pour toutes, puis synchronisé avec le foyer"
+                      onClick={() => catalogImportRef.current?.click()}
+                      title="Importer un fichier catalogue — un aperçu des mises à jour et nouveautés s'affiche avant application"
                       style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
                     >
-                      Importer des prix
+                      Importer un catalogue
                     </button>
                     <input
-                      ref={priceImportRef}
+                      ref={catalogImportRef}
                       type="file"
                       accept="application/json"
                       style={{ display: "none" }}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) importPrices(f); e.target.value = ""; }}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCatalogFile(f); e.target.value = ""; }}
                     />
                   </div>
-
-                  <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em", display: "block", marginTop: 22 }}>Articles</label>
-                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                    <button
-                      onClick={() => setExportChoice("articles")}
-                      title="Exporter tes articles personnalisés (local ou cloud)"
-                      style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
-                    >
-                      Exporter mes articles personnalisés
-                    </button>
-                    <button
-                      onClick={() => articlesImportRef.current?.click()}
-                      title="Importer un fichier d'articles — fusionné dans tes articles personnalisés"
-                      style={{ flex: 1, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
-                    >
-                      Importer des articles
-                    </button>
-                    <input
-                      ref={articlesImportRef}
-                      type="file"
-                      accept="application/json"
-                      style={{ display: "none" }}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) importArticles(f); e.target.value = ""; }}
-                    />
-                  </div>
-                  <button
-                    onClick={exportAllArticles}
-                    title="Télécharger tout le catalogue (base + personnalisés), id/nom/rayon/icône/poids/sous-produits"
-                    style={{ width: "100%", marginTop: 8, padding: "13px 16px", borderRadius: 12, border: "1px solid var(--color-primary-border)", background: "var(--color-primary)", color: "#23262E", fontWeight: 600, fontSize: 13.5, cursor: "pointer" }}
-                  >
-                    Exporter tous mes articles
-                  </button>
                   <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "8px 0 0", lineHeight: 1.4 }}>
+                    Un seul fichier pour tout : id, nom, tag, icône, rayon, prix, poids et sous-produits, pour le catalogue de base comme pour tes articles personnalisés.
+                  </p>
+                  <p style={{ fontSize: 11.5, color: "#ADAB98", margin: "10px 0 0", lineHeight: 1.4 }}>
                     {customProducts.length === 0
                       ? "Aucun article personnalisé pour l'instant."
                       : `${customProducts.length} article${customProducts.length > 1 ? "s" : ""} personnalisé${customProducts.length > 1 ? "s" : ""}.`}
-                    {" "}"Tous mes articles" inclut aussi le catalogue de base ({products.length} au total). Prix exclus des deux (voir section Prix).
+                    {" "}Catalogue total : {products.length} article{products.length > 1 ? "s" : ""}.
                   </p>
                 </>
               )}
