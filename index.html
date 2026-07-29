@@ -1699,6 +1699,11 @@ function ImportReviewModal({ diff, onClose, onApply }) {
                           {(catInfo(u.oldCat) || {}).label} → {(catInfo(u.newCat) || {}).label}
                         </div>
                       )}
+                      {u.newVariants && u.newVariants.length > 0 && (
+                        <div style={{ fontSize: 11, color: "#3FA184", fontWeight: 600, marginTop: 2 }}>
+                          + sous-produit{u.newVariants.length > 1 ? "s" : ""} : {u.newVariants.map((v) => v.name).join(", ")}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -2529,9 +2534,12 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return Math.abs(na - nb) > 0.0001;
   };
 
+  const slugify = (s) => normalize(s).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
   // Compare un catalogue importé (fichier local ou sauvegarde cloud) à l'état actuel, et construit
   // deux listes distinctes :
-  // - updates : produits déjà connus dont le prix et/ou le rayon a changé (rien si aucun changement)
+  // - updates : produits déjà connus dont le prix, le rayon et/ou les sous-produits ont changé
+  //   (rien si aucun changement)
   // - newOnes : produits absents du catalogue actuel, avec assez d'infos (nom/icône/rayon) pour être créés
   const buildImportDiff = (raw) => {
     const items = normalizeImportPayload(raw);
@@ -2543,11 +2551,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
       if (existing) {
         const priceChanged = priceDiffers(it.priceUnit, existing.priceUnit) || priceDiffers(it.priceKg, existing.priceKg);
         const catChanged = !!it.cat && it.cat !== existing.cat;
-        if (priceChanged || catChanged) {
+        const existingVariantNames = new Set((existing.variants || []).map((v) => normalize(v.name)));
+        const newVariants = (it.variants || []).filter((v) => v && v.name && !existingVariantNames.has(normalize(v.name)));
+        if (priceChanged || catChanged || newVariants.length) {
           updates.push({
             id: it.id, name: existing.name, icon: existing.icon,
             oldPriceUnit: existing.priceUnit, oldPriceKg: existing.priceKg,
             oldCat: existing.cat, newCat: it.cat,
+            oldVariants: existing.variants || [], newVariants,
             priceChanged, catChanged, raw: it,
           });
         }
@@ -2561,8 +2572,8 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
     return { updates, newOnes };
   };
 
-  // Applique un aperçu d'import validé par l'utilisateur : toutes les mises à jour de prix/rayon,
-  // et uniquement les nouveaux produits sélectionnés.
+  // Applique un aperçu d'import validé par l'utilisateur : toutes les mises à jour de prix/rayon/
+  // sous-produits, et uniquement les nouveaux produits sélectionnés.
   const applyImportDiff = (updates, selectedNewIds, newOnesList) => {
     updates.forEach((u) => {
       const patch = {};
@@ -2571,6 +2582,12 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
         if (u.raw.priceKg !== undefined) patch.priceKg = numOrNull(u.raw.priceKg);
       }
       if (u.catChanged) patch.cat = u.raw.cat;
+      if (u.newVariants && u.newVariants.length) {
+        patch.variants = [
+          ...u.oldVariants,
+          ...u.newVariants.map((v) => ({ id: `v-${slugify(v.name)}-${Date.now()}`, name: v.name })),
+        ];
+      }
       editProduct(u.id, patch);
     });
     const toAdd = newOnesList.filter((n) => selectedNewIds.has(n.id));
