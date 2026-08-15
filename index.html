@@ -2315,36 +2315,40 @@ function ListChartModal({ visibleList, products, onClose }) {
       const p = products.find((pr) => pr.id === item.productId);
       if (!p) return;
       const est = estimateItemPrice(item, p);
-      if (est == null) { unknownCount++; return; }
-      total += est;
-      if (!map[p.cat]) map[p.cat] = { amount: 0, entries: [] };
-      map[p.cat].amount += est;
+      if (est == null) unknownCount++;
+      else total += est;
+      if (!map[p.cat]) map[p.cat] = { amount: 0, hasKnown: false, entries: [] };
+      if (est != null) { map[p.cat].amount += est; map[p.cat].hasKnown = true; }
       map[p.cat].entries.push({ item, product: p, amount: est });
     });
     const rows = Object.entries(map)
       .map(([key, data]) => ({
         ...catInfo(key),
-        amount: data.amount,
-        pct: total > 0 ? (data.amount / total) * 100 : 0,
+        amount: data.hasKnown ? data.amount : null,
+        pct: data.hasKnown && total > 0 ? (data.amount / total) * 100 : (data.hasKnown ? 0 : null),
         entries: data.entries
           .slice()
-          .sort((a, b) => b.amount - a.amount)
-          .map((e) => ({ ...e, pct: total > 0 ? (e.amount / total) * 100 : 0 })),
+          .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1))
+          .map((e) => ({ ...e, pct: e.amount != null && total > 0 ? (e.amount / total) * 100 : (e.amount != null ? 0 : null) })),
       }))
-      .sort((a, b) => b.amount - a.amount);
+      .sort((a, b) => (b.amount ?? -1) - (a.amount ?? -1));
     return { rows, total, unknownCount };
   }, [visibleList, products]);
 
   const gradient = useMemo(() => {
-    if (!rows.length) return null;
+    const known = rows.filter((r) => r.amount != null && r.pct > 0);
+    if (!known.length) return null;
     let cum = 0;
-    const stops = rows.map((r) => {
+    const stops = known.map((r) => {
       const start = cum;
       cum += r.pct;
       return `${r.accent} ${start}% ${cum}%`;
     });
     return `conic-gradient(${stops.join(", ")})`;
   }, [rows]);
+
+  const priceText = (v) => (v == null ? "?" : formatEuro(v));
+  const pctText = (v, decimals) => (v == null ? "?" : `${v.toFixed(decimals ?? 0)}%`);
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "var(--color-primary)", zIndex: 97, display: "flex", flexDirection: "column", overflowY: "auto" }}>
@@ -2363,14 +2367,14 @@ function ListChartModal({ visibleList, products, onClose }) {
           <div style={{ textAlign: "center", padding: "60px 16px", color: "#C9C3AE" }}>
             <div style={{ fontSize: 38, marginBottom: 10 }}>📊</div>
             <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>
-              Pas assez de prix connus dans ta liste<br />pour générer un graphique.
+              Ta liste est vide pour l'instant.
             </p>
           </div>
         ) : (
           <>
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
               <div style={{ position: "relative", width: 220, height: 220 }}>
-                <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: gradient, boxShadow: "0 8px 24px rgba(35,38,46,0.12)" }} />
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: gradient || "var(--color-primary-border)", boxShadow: "0 8px 24px rgba(35,38,46,0.12)" }} />
                 <div style={{ position: "absolute", inset: 28, borderRadius: "50%", background: "var(--color-primary)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <span style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 700, color: "#23262E", textAlign: "center" }}>{formatEuro(total)}</span>
                   <span style={{ fontSize: 11, color: "#9A9887", fontWeight: 600, marginTop: 2 }}>estimé</span>
@@ -2389,8 +2393,8 @@ function ListChartModal({ visibleList, products, onClose }) {
                     >
                       <span style={{ width: 12, height: 12, borderRadius: "50%", background: r.accent, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#23262E", minWidth: 0, wordBreak: "break-word" }}>{r.label}</span>
-                      <span style={{ fontSize: 12.5, color: "#9A9887", fontWeight: 600, flexShrink: 0 }}>{r.pct.toFixed(0)}%</span>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: "#23262E", minWidth: 62, textAlign: "right", flexShrink: 0 }}>{formatEuro(r.amount)}</span>
+                      <span style={{ fontSize: 12.5, color: "#9A9887", fontWeight: 600, flexShrink: 0 }}>{pctText(r.pct)}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#23262E", minWidth: 62, textAlign: "right", flexShrink: 0 }}>{priceText(r.amount)}</span>
                       <ChevronLeft size={14} color="#A8A695" style={{ flexShrink: 0, transform: isOpen ? "rotate(90deg)" : "rotate(-90deg)", transition: "transform 0.15s" }} />
                     </button>
                     {isOpen && (
@@ -2402,8 +2406,8 @@ function ListChartModal({ visibleList, products, onClose }) {
                               {product.name}
                               {item.note && <span style={{ color: r.accent }}> · {item.note}</span>}
                             </span>
-                            <span style={{ fontSize: 11.5, color: "#7A7968", fontWeight: 600, flexShrink: 0 }}>{pct.toFixed(1)}%</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: "#23262E", minWidth: 56, textAlign: "right", flexShrink: 0 }}>{formatEuro(amount)}</span>
+                            <span style={{ fontSize: 11.5, color: "#7A7968", fontWeight: 600, flexShrink: 0 }}>{pctText(pct, 1)}</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#23262E", minWidth: 56, textAlign: "right", flexShrink: 0 }}>{priceText(amount)}</span>
                           </div>
                         ))}
                       </div>
@@ -2415,7 +2419,7 @@ function ListChartModal({ visibleList, products, onClose }) {
 
             {unknownCount > 0 && (
               <p style={{ fontSize: 12, color: "#ADAB98", textAlign: "center", margin: "18px 0 0", lineHeight: 1.4 }}>
-                {unknownCount} article{unknownCount > 1 ? "s" : ""} sans prix connu, non inclus dans ce graphique.
+                Les articles marqués « ? » n'ont pas de prix connu dans le catalogue.
               </p>
             )}
           </>
