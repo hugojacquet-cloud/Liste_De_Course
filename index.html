@@ -2305,6 +2305,8 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
 // --- Graphique de la liste (répartition par rayon, prix + pourcentage) -----
 
 function ListChartModal({ visibleList, products, onClose }) {
+  const [expandedCat, setExpandedCat] = useState(null);
+
   const { rows, total, unknownCount } = useMemo(() => {
     const map = {};
     let total = 0;
@@ -2315,10 +2317,20 @@ function ListChartModal({ visibleList, products, onClose }) {
       const est = estimateItemPrice(item, p);
       if (est == null) { unknownCount++; return; }
       total += est;
-      map[p.cat] = (map[p.cat] || 0) + est;
+      if (!map[p.cat]) map[p.cat] = { amount: 0, entries: [] };
+      map[p.cat].amount += est;
+      map[p.cat].entries.push({ item, product: p, amount: est });
     });
     const rows = Object.entries(map)
-      .map(([key, amount]) => ({ ...catInfo(key), amount, pct: total > 0 ? (amount / total) * 100 : 0 }))
+      .map(([key, data]) => ({
+        ...catInfo(key),
+        amount: data.amount,
+        pct: total > 0 ? (data.amount / total) * 100 : 0,
+        entries: data.entries
+          .slice()
+          .sort((a, b) => b.amount - a.amount)
+          .map((e) => ({ ...e, pct: total > 0 ? (e.amount / total) * 100 : 0 })),
+      }))
       .sort((a, b) => b.amount - a.amount);
     return { rows, total, unknownCount };
   }, [visibleList, products]);
@@ -2367,14 +2379,38 @@ function ListChartModal({ visibleList, products, onClose }) {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {rows.map((r) => (
-                <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 12, background: "#FFFFFF", border: "1px solid var(--color-primary-border)", borderRadius: 14, padding: "12px 14px" }}>
-                  <span style={{ width: 12, height: 12, borderRadius: "50%", background: r.accent, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#23262E", minWidth: 0, wordBreak: "break-word" }}>{r.label}</span>
-                  <span style={{ fontSize: 12.5, color: "#9A9887", fontWeight: 600, flexShrink: 0 }}>{r.pct.toFixed(0)}%</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#23262E", minWidth: 62, textAlign: "right", flexShrink: 0 }}>{formatEuro(r.amount)}</span>
-                </div>
-              ))}
+              {rows.map((r) => {
+                const isOpen = expandedCat === r.key;
+                return (
+                  <div key={r.key} style={{ background: "#FFFFFF", border: `1px solid ${isOpen ? r.accent : "var(--color-primary-border)"}`, borderRadius: 14, overflow: "hidden" }}>
+                    <button
+                      onClick={() => setExpandedCat(isOpen ? null : r.key)}
+                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, background: "transparent", border: "none", padding: "12px 14px", cursor: "pointer", textAlign: "left" }}
+                    >
+                      <span style={{ width: 12, height: 12, borderRadius: "50%", background: r.accent, flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#23262E", minWidth: 0, wordBreak: "break-word" }}>{r.label}</span>
+                      <span style={{ fontSize: 12.5, color: "#9A9887", fontWeight: 600, flexShrink: 0 }}>{r.pct.toFixed(0)}%</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#23262E", minWidth: 62, textAlign: "right", flexShrink: 0 }}>{formatEuro(r.amount)}</span>
+                      <ChevronLeft size={14} color="#A8A695" style={{ flexShrink: 0, transform: isOpen ? "rotate(90deg)" : "rotate(-90deg)", transition: "transform 0.15s" }} />
+                    </button>
+                    {isOpen && (
+                      <div className="grow-in" style={{ borderTop: "1px solid var(--color-primary-border)", background: r.tint }}>
+                        {r.entries.map(({ item, product, amount, pct }) => (
+                          <div key={item.listId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                            <span style={{ fontSize: 16, flexShrink: 0 }}><IconGlyph icon={product.icon} size={16} /></span>
+                            <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#23262E", minWidth: 0, wordBreak: "break-word" }}>
+                              {product.name}
+                              {item.note && <span style={{ color: r.accent }}> · {item.note}</span>}
+                            </span>
+                            <span style={{ fontSize: 11.5, color: "#7A7968", fontWeight: 600, flexShrink: 0 }}>{pct.toFixed(1)}%</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#23262E", minWidth: 56, textAlign: "right", flexShrink: 0 }}>{formatEuro(amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {unknownCount > 0 && (
