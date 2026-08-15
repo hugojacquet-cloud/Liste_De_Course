@@ -141,6 +141,12 @@ const BookOpen = (p) => (
     <line x1="12" y1="6" x2="12" y2="20" />
   </Icon>
 );
+const PieChartIcon = (p) => (
+  <Icon {...p}>
+    <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+    <path d="M22 12A10 10 0 0 0 12 2v10z" />
+  </Icon>
+);
 
 
 // --- Catégories ----------------------------------------------------------
@@ -2296,6 +2302,93 @@ function PaletteSection({ palette, savedPalettes, onChangePrimary, onChangeAccen
   );
 }
 
+// --- Graphique de la liste (répartition par rayon, prix + pourcentage) -----
+
+function ListChartModal({ visibleList, products, onClose }) {
+  const { rows, total, unknownCount } = useMemo(() => {
+    const map = {};
+    let total = 0;
+    let unknownCount = 0;
+    visibleList.forEach((item) => {
+      const p = products.find((pr) => pr.id === item.productId);
+      if (!p) return;
+      const est = estimateItemPrice(item, p);
+      if (est == null) { unknownCount++; return; }
+      total += est;
+      map[p.cat] = (map[p.cat] || 0) + est;
+    });
+    const rows = Object.entries(map)
+      .map(([key, amount]) => ({ ...catInfo(key), amount, pct: total > 0 ? (amount / total) * 100 : 0 }))
+      .sort((a, b) => b.amount - a.amount);
+    return { rows, total, unknownCount };
+  }, [visibleList, products]);
+
+  const gradient = useMemo(() => {
+    if (!rows.length) return null;
+    let cum = 0;
+    const stops = rows.map((r) => {
+      const start = cum;
+      cum += r.pct;
+      return `${r.accent} ${start}% ${cum}%`;
+    });
+    return `conic-gradient(${stops.join(", ")})`;
+  }, [rows]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "var(--color-primary)", zIndex: 97, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: 480, margin: "0 auto", padding: "20px 20px 40px", flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+          <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 24, margin: 0 }}>Graphique de la liste</h1>
+          <button
+            onClick={onClose}
+            style={{ marginLeft: "auto", background: "#FFFFFF", border: "none", borderRadius: "50%", width: 36, height: 36, color: "#7A7968", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(35,38,46,0.12)", flexShrink: 0 }}
+          >
+            <X size={17} />
+          </button>
+        </div>
+
+        {rows.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 16px", color: "#C9C3AE" }}>
+            <div style={{ fontSize: 38, marginBottom: 10 }}>📊</div>
+            <p style={{ fontSize: 14, margin: 0, lineHeight: 1.5 }}>
+              Pas assez de prix connus dans ta liste<br />pour générer un graphique.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
+              <div style={{ position: "relative", width: 220, height: 220 }}>
+                <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: gradient, boxShadow: "0 8px 24px rgba(35,38,46,0.12)" }} />
+                <div style={{ position: "absolute", inset: 28, borderRadius: "50%", background: "var(--color-primary)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: 21, fontWeight: 700, color: "#23262E", textAlign: "center" }}>{formatEuro(total)}</span>
+                  <span style={{ fontSize: 11, color: "#9A9887", fontWeight: 600, marginTop: 2 }}>estimé</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {rows.map((r) => (
+                <div key={r.key} style={{ display: "flex", alignItems: "center", gap: 12, background: "#FFFFFF", border: "1px solid var(--color-primary-border)", borderRadius: 14, padding: "12px 14px" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: "50%", background: r.accent, flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: "#23262E", minWidth: 0, wordBreak: "break-word" }}>{r.label}</span>
+                  <span style={{ fontSize: 12.5, color: "#9A9887", fontWeight: 600, flexShrink: 0 }}>{r.pct.toFixed(0)}%</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: "#23262E", minWidth: 62, textAlign: "right", flexShrink: 0 }}>{formatEuro(r.amount)}</span>
+                </div>
+              ))}
+            </div>
+
+            {unknownCount > 0 && (
+              <p style={{ fontSize: 12, color: "#ADAB98", textAlign: "center", margin: "18px 0 0", lineHeight: 1.4 }}>
+                {unknownCount} article{unknownCount > 1 ? "s" : ""} sans prix connu, non inclus dans ce graphique.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- App -------------------------------------------------------------------
 
 function App({ initialData, remoteData, remoteVersion, onDataChange, householdName, householdId, isAdmin, optionsOpen, onCloseOptions, onOpenOptions, onOpenFoyer, onOpenAccount }) {
@@ -2305,6 +2398,7 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
   const [lists, setLists] = useState(() => initialData?.lists ?? [{ id: "default", name: "Ma liste" }]);
   const [activeListId, setActiveListId] = useState(() => initialData?.activeListId ?? (initialData?.lists?.[0]?.id ?? "default"));
   const [showListSwitcher, setShowListSwitcher] = useState(false);
+  const [showChart, setShowChart] = useState(false);
   const [list, setList] = useState(() => initialData?.list ?? []);
   const [confirmClearBought, setConfirmClearBought] = useState(false);
   const [undoState, setUndoState] = useState(null); // { items: [...] } — articles supprimés récemment, restaurables
@@ -2951,13 +3045,22 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
                 {tab === "liste" ? (activeList?.name || "Ma liste") : tab === "tous" ? "Tous les produits" : "Recettes"}
               </h1>
               {tab === "liste" && (
-                <button
-                  onClick={() => setShowListSwitcher(true)}
-                  style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--color-accent-tint)", border: "none", borderRadius: 999, padding: "9px 14px", color: "var(--color-accent-dark)", fontWeight: 700, fontSize: 13, cursor: "pointer", flexShrink: 0, marginTop: 5 }}
-                >
-                  <ListChecks size={13} /> Listes
-                  <ChevronLeft size={13} style={{ transform: "rotate(-90deg)" }} />
-                </button>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0, marginTop: 5 }}>
+                  <button
+                    onClick={() => setShowChart(true)}
+                    title="Graphique de la liste"
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--color-primary-border)", border: "none", borderRadius: 999, width: 36, height: 36, color: "#23262E", fontWeight: 700, fontSize: 13, cursor: "pointer", justifyContent: "center" }}
+                  >
+                    <PieChartIcon size={15} />
+                  </button>
+                  <button
+                    onClick={() => setShowListSwitcher(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--color-accent-tint)", border: "none", borderRadius: 999, padding: "9px 14px", color: "var(--color-accent-dark)", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                  >
+                    <ListChecks size={13} /> Listes
+                    <ChevronLeft size={13} style={{ transform: "rotate(-90deg)" }} />
+                  </button>
+                </div>
               )}
             </div>
             {/* Hauteur réservée constante quel que soit l'onglet, pour éviter que le contenu
@@ -3341,6 +3444,14 @@ function App({ initialData, remoteData, remoteVersion, onDataChange, householdNa
           onRename={renameList}
           onDelete={deleteList}
           itemCounts={Object.fromEntries(lists.map((l) => [l.id, list.filter((it) => (it.group || lists[0]?.id) === l.id && !it.bought).length]))}
+        />
+      )}
+
+      {showChart && (
+        <ListChartModal
+          visibleList={visibleList}
+          products={products}
+          onClose={() => setShowChart(false)}
         />
       )}
 
