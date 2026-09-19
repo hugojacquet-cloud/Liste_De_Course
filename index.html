@@ -448,7 +448,7 @@ const PRODUCTS = (() => {
   return out;
 })();
 
-const UNITS = ["kg", "paquet"];
+const UNITS = ["kg", "g", "paquet"];
 
 // Toutes les icônes déjà utilisées dans la base, proposées dans le sélecteur d'icône
 const ALL_ICONS = [...new Set(PRODUCTS.map((p) => p.icon))];
@@ -542,14 +542,20 @@ function formatProductPrice(product) {
   return parts.length ? parts.join(" · ") : null;
 }
 
-// Estime le coût d'un article de la liste : prix au kg × qty si l'unité choisie est "kg",
-// prix à l'unité × qty si l'unité choisie est "paquet". Renvoie null si le prix correspondant est inconnu.
+// Estime le coût d'un article de la liste : prix au kg × qty si l'unité choisie est "kg" (ou
+// prix au kg × qty/1000 si l'unité est "g"), prix à l'unité × qty si l'unité choisie est "paquet".
+// Renvoie null si le prix correspondant est inconnu.
 function estimateItemPrice(item, product) {
   if (!product) return null;
   if (item.unit === "kg") {
     if (product.priceKg == null || product.priceKg === "") return null;
     const p = Number(product.priceKg);
     return Number.isNaN(p) ? null : item.qty * p;
+  }
+  if (item.unit === "g") {
+    if (product.priceKg == null || product.priceKg === "") return null;
+    const p = Number(product.priceKg);
+    return Number.isNaN(p) ? null : item.qty * (p / 1000);
   }
   if (item.unit === "paquet") {
     if (product.priceUnit != null && product.priceUnit !== "") {
@@ -744,18 +750,47 @@ function ItemModal({ product, initial, onClose, onConfirm, onDelete, confirmLabe
 
         <label style={{ fontSize: 12.5, fontWeight: 600, color: "#9A9887", textTransform: "uppercase", letterSpacing: "0.04em" }}>Quantité</label>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "8px 0 18px" }}>
-          <button onClick={() => setQty((q) => Math.max(0, +(q - (unit === "kg" || unit === "L" ? 0.5 : 1)).toFixed(2)))} style={stepperBtn}>
+          <button
+            onClick={() => setQty((q) => {
+              if (unit === "kg" || unit === "L") return Math.max(0, +(q - 0.5).toFixed(2));
+              // En grammes, on arrondit systématiquement à la dizaine la plus proche avant de
+              // retirer le pas, pour ne jamais dériver sur des valeurs du type 51, 41, 31…
+              if (unit === "g") return Math.max(0, Math.round((q - 50) / 10) * 10);
+              return Math.max(0, q - 1);
+            })}
+            style={stepperBtn}
+          >
             <Minus size={16} />
           </button>
           <input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} style={{ flex: 1, textAlign: "center", background: "var(--color-primary)", border: "1px solid var(--color-primary-border)", borderRadius: 10, color: "#23262E", fontSize: 16, fontWeight: 600, padding: "10px 6px", outline: "none" }} />
-          <button onClick={() => setQty((q) => +(q + (unit === "kg" || unit === "L" ? 0.5 : 1)).toFixed(2))} style={stepperBtn}>
+          <button
+            onClick={() => setQty((q) => {
+              if (unit === "kg" || unit === "L") return +(q + 0.5).toFixed(2);
+              if (unit === "g") return Math.round((q + 50) / 10) * 10;
+              return q + 1;
+            })}
+            style={stepperBtn}
+          >
             <Plus size={16} />
           </button>
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
           {UNITS.map((u) => (
-            <button key={u} onClick={() => setUnit(u)} style={{ padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1px solid ${unit === u ? c.accent : "var(--color-primary-border)"}`, background: unit === u ? c.accent + "26" : "transparent", color: unit === u ? c.accent : "#7A7968", cursor: "pointer" }}>
+            <button
+              key={u}
+              onClick={() => {
+                setUnit(u);
+                // En passant sur "g", on cale la quantité sur une base ronde (100 g par défaut,
+                // ou la valeur déjà saisie arrondie à la dizaine) pour que les +/- restent ronds ensuite.
+                if (u === "g") {
+                  // q <= 10 correspond typiquement à la quantité par défaut (1, en kg/paquet) plutôt
+                  // qu'à un vrai poids déjà saisi : dans ce cas on démarre sur une base ronde de 100 g.
+                  setQty((q) => (q > 10 ? Math.round(q / 10) * 10 : 100));
+                }
+              }}
+              style={{ padding: "7px 14px", borderRadius: 999, fontSize: 13, fontWeight: 600, border: `1px solid ${unit === u ? c.accent : "var(--color-primary-border)"}`, background: unit === u ? c.accent + "26" : "transparent", color: unit === u ? c.accent : "#7A7968", cursor: "pointer" }}
+            >
               {u}
             </button>
           ))}
