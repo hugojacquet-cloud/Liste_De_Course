@@ -10,11 +10,11 @@ jobs:
     steps:
       - name: Ping Liste de Course
         run: |
-          curl -s -w "\nHTTP %{http_code}\n" "${{ secrets.COURSES_URL }}/rest/v1/courses_data?select=household_id&limit=1" \
+          curl -sf -o /dev/null "${{ secrets.COURSES_URL }}/rest/v1/courses_data?select=household_id&limit=1" \
             -H "apikey: ${{ secrets.COURSES_ANON_KEY }}"
 
       - name: Ping simulateur-immo
         if: always()
         run: |
-          curl -s -w "\nHTTP %{http_code}\n" "${{ secrets.SIMU_URL }}/rest/v1/simulation_data?select=*&limit=1" \
+          curl -sf -o /dev/null "${{ secrets.SIMU_URL }}/rest/v1/simulation_data?select=*&limit=1" \
             -H "apikey: ${{ secrets.SIMU_ANON_KEY }}"
